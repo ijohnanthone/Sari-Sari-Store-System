@@ -1,0 +1,105 @@
+<header class="header-card px-3 px-lg-4 py-3">
+  <div class="d-flex flex-wrap gap-3 justify-content-between align-items-center">
+    <div>
+      <h2 class="h3 mb-1"><%= pageTitle %></h2>
+      <div class="mini-note"><%= todayLabel %></div>
+    </div>
+    <div class="d-flex flex-wrap align-items-center gap-3">
+      <form class="d-flex" method="get" action="/inventory">
+        <% if (quickSearchStatus !== "all") { %>
+          <input type="hidden" name="status" value="<%= quickSearchStatus %>">
+        <% } %>
+        <div class="input-group" style="max-width: 320px;">
+          <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+          <input class="form-control" name="search" value="<%= quickSearch %>" placeholder="Quick inventory search">
+          <button class="btn btn-outline-secondary" type="submit">Search</button>
+        </div>
+      </form>
+      <div class="d-flex align-items-center gap-3">
+        <div class="dropdown notification-dropdown">
+          <button class="btn notification-button position-relative text-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Open notifications">
+            <i class="bi bi-bell fs-5"></i>
+            <% if (notifications.length) { %>
+              <span class="notification-count position-absolute top-0 start-100 translate-middle"><%= notifications.length %></span>
+            <% } %>
+          </button>
+          <div class="dropdown-menu dropdown-menu-end notification-menu p-0 overflow-hidden">
+            <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+              <div>
+                <div class="fw-semibold">Notifications</div>
+                <div class="mini-note"><%= notifications.length ? `${notifications.length} active alert${notifications.length === 1 ? "" : "s"}` : "You're all caught up." %></div>
+              </div>
+              <a class="btn btn-sm btn-outline-secondary" href="/settings">Settings</a>
+            </div>
+            <% if (notifications.length) { %>
+              <div class="list-group list-group-flush">
+                <% notifications.forEach((notification) => { %>
+                  <% if (notification.link) { %>
+                    <a class="list-group-item border-0 px-3 py-3 notification-item notification-link" href="<%= notification.link %>">
+                      <div class="d-flex gap-3">
+                        <div class="notification-icon text-<%= notification.tone %>">
+                          <i class="bi <%= notification.icon %>"></i>
+                        </div>
+                        <div>
+                          <div class="fw-semibold"><%= notification.title %></div>
+                          <div class="mini-note"><%= notification.message %></div>
+                        </div>
+                      </div>
+                    </a>
+                  <% } else { %>
+                    <div class="list-group-item border-0 px-3 py-3 notification-item">
+                      <div class="d-flex gap-3">
+                        <div class="notification-icon text-<%= notification.tone %>">
+                          <i class="bi <%= notification.icon %>"></i>
+                        </div>
+                        <div>
+                          <div class="fw-semibold"><%= notification.title %></div>
+                          <div class="mini-note"><%= notification.message %></div>
+                        </div>
+                      </div>
+                    </div>
+                  <% } %>
+                <% }) %>
+              </div>
+            <% } else { %>
+              <div class="px-3 py-4 text-center mini-note">No notifications to show.</div>
+            <% } %>
+          </div>
+        </div>
+        <% if (user) { %>
+          <div class="d-flex align-items-center gap-2">
+            <div class="icon-chip rounded-circle" style="width: 2.5rem; height: 2.5rem;"><i class="bi bi-person"></i></div>
+            <div>
+              <div class="fw-semibold"><%= user.full_name %></div>
+              <div class="mini-note"><%= user.role %></div>
+            </div>
+          </div>
+          <form method="post" action="/logout" class="ms-1">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button class="btn btn-outline-secondary" type="submit">Logout</button>
+          </form>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</header>
+<script>
+  window.addEventListener("load", () => {
+    document.querySelectorAll(".notification-dropdown").forEach((dropdownElement) => {
+      const toggle = dropdownElement.querySelector("[data-bs-toggle='dropdown']");
+      if (!toggle || typeof bootstrap === "undefined") return;
+
+      const dropdown = bootstrap.Dropdown.getOrCreateInstance(toggle);
+      let hideTimer;
+
+      dropdownElement.addEventListener("mouseenter", () => {
+        window.clearTimeout(hideTimer);
+        dropdown.show();
+      });
+
+      dropdownElement.addEventListener("mouseleave", () => {
+        hideTimer = window.setTimeout(() => dropdown.hide(), 140);
+      });
+    });
+  });
+</script>

@@ -1,0 +1,678 @@
+<%- include("partials/head") %>
+<div class="app-shell d-lg-flex">
+  <%- include("partials/sidebar") %>
+  <main class="flex-grow-1">
+    <%- include("partials/topbar") %>
+    <section class="p-3 p-lg-4">
+      <%- include("partials/flash") %>
+      <div id="salesLiveAlert"></div>
+      <div class="row g-4 mb-4">
+        <div class="col-md-6 col-xl-3"><div class="metric-card p-4"><div class="mini-note">Today's Sales</div><div class="h2 fw-bold" id="salesMetricTodayTotal"><%= formatCurrency(metrics.todayTotal) %></div><div class="mini-note"><span id="salesMetricTodayTransactions"><%= metrics.todayTransactions %></span> transactions</div></div></div>
+        <div class="col-md-6 col-xl-3"><div class="metric-card p-4"><div class="mini-note">Items Sold Today</div><div class="h2 fw-bold" id="salesMetricTodayItems"><%= metrics.todayItems %></div><div class="mini-note">units</div></div></div>
+        <div class="col-md-6 col-xl-3"><div class="metric-card p-4"><div class="mini-note">Weekly Sales</div><div class="h2 fw-bold" id="salesMetricWeeklyTotal"><%= formatCurrency(metrics.weeklyTotal) %></div><div class="mini-note">Last 7 days</div></div></div>
+        <div class="col-md-6 col-xl-3"><div class="metric-card p-4"><div class="mini-note">Monthly Sales</div><div class="h2 fw-bold" id="salesMetricMonthlyTotal"><%= formatCurrency(metrics.monthlyTotal) %></div><div class="mini-note">Last 30 days</div></div></div>
+      </div>
+
+      <div class="content-card p-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+          <div>
+            <div class="section-title">Quick Sale Entry</div>
+            <div class="mini-note">Built for faster sari-sari checkout: search, tap quick picks, and keep the cart visible.</div>
+          </div>
+          <div class="d-flex flex-wrap align-items-center gap-2">
+            <div class="mini-note">Shortcut: <span class="fw-semibold text-dark">F2</span> focuses search</div>
+            <button class="btn btn-outline-secondary" type="button" data-bs-toggle="offcanvas" data-bs-target="#salesHistoryPanel" aria-controls="salesHistoryPanel">Transactions</button>
+          </div>
+        </div>
+
+        <form method="post" action="/sales/add" id="saleForm">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="row g-4 align-items-start">
+            <div class="col-xl-7">
+              <div class="vstack gap-4">
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <label class="form-label">Sale Date</label>
+                    <input class="form-control" type="date" name="saleDate" value="<%= saleDateDefault %>" required>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Payment Method</label>
+                    <select class="form-select" name="paymentMethod" required>
+                      <option value="Cash">Cash</option>
+                      <option value="GCash">GCash</option>
+                      <option value="Card">Card</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Quick Quantity</label>
+                    <div class="input-group">
+                      <button class="btn btn-outline-secondary quick-qty-adjust" type="button" data-step="-1">-</button>
+                      <input class="form-control text-center" id="quickQty" type="number" min="1" value="1" inputmode="numeric">
+                      <button class="btn btn-outline-secondary quick-qty-adjust" type="button" data-step="1">+</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="pos-search-wrap">
+                  <label class="form-label">Item Search</label>
+                  <div class="input-group input-group-lg">
+                    <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
+                    <input class="form-control" id="quickItemSearch" placeholder="Type item name, category, or code">
+                    <button class="btn btn-success" id="addSelectedItem" type="button">Add Item</button>
+                  </div>
+                  <div class="mini-note mt-2">Examples: `Coke`, `Sardines`, `Soap`. Search resets after each add.</div>
+                  <div class="pos-suggestions list-group mt-2 d-none" id="quickSuggestions"></div>
+                </div>
+
+                <div>
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="fw-semibold">Quick Picks</div>
+                    <button class="btn btn-sm btn-outline-secondary" type="button" id="clearCartButton">Clear Cart</button>
+                  </div>
+                  <div class="vstack gap-3">
+                    <div>
+                      <div class="mini-note mb-2">Hot Today</div>
+                      <div class="pos-chip-grid" id="quickPicksToday">
+                        <% quickPicks.today.forEach((item) => { %>
+                          <button class="btn btn-outline-secondary pos-chip" type="button" data-item-id="<%= item.id %>">
+                            <span class="d-block fw-semibold"><%= item.name %></span>
+                            <span class="mini-note"><%= formatCurrency(item.selling_price) %></span>
+                          </button>
+                        <% }) %>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="mini-note mb-2">This Week</div>
+                      <div class="pos-chip-grid" id="quickPicksWeek">
+                        <% quickPicks.week.forEach((item) => { %>
+                          <button class="btn btn-outline-secondary pos-chip" type="button" data-item-id="<%= item.id %>">
+                            <span class="d-block fw-semibold"><%= item.name %></span>
+                            <span class="mini-note"><%= formatCurrency(item.selling_price) %></span>
+                          </button>
+                        <% }) %>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="mini-note mb-2">Smart Picks</div>
+                      <div class="pos-chip-grid" id="quickPicksSmart">
+                        <% quickPicks.smart.forEach((item) => { %>
+                          <button class="btn btn-outline-secondary pos-chip" type="button" data-item-id="<%= item.id %>">
+                            <span class="d-block fw-semibold"><%= item.name %></span>
+                            <span class="mini-note"><%= formatCurrency(item.selling_price) %></span>
+                          </button>
+                        <% }) %>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-xl-5">
+              <div class="content-card p-3 p-lg-4 pos-cart-panel">
+                <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+                  <div>
+                    <div class="section-title">Current Cart</div>
+                    <div class="mini-note">Keep the customer order visible while you keep typing.</div>
+                  </div>
+                  <button class="btn btn-outline-secondary" type="button" id="newCustomerButton">New Customer</button>
+                </div>
+
+                <div class="table-responsive pos-cart-table-wrap">
+                  <table class="table align-middle mb-0">
+                    <thead>
+                      <tr>
+                        <th>Item</th>
+                        <th class="text-end">Price</th>
+                        <th style="width: 170px;">Qty</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-end">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="saleCartBody">
+                      <tr id="emptyCartRow">
+                        <td colspan="5" class="text-center py-4 mini-note">No items in the cart yet.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div id="saleHiddenInputs"></div>
+
+                <div class="row g-3 mt-1">
+                  <div class="col-md-4">
+                    <div class="content-card p-3 h-100">
+                      <div class="mini-note">Cart Items</div>
+                      <div class="h3 mb-0" id="cartItemCount">0</div>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="content-card p-3 h-100">
+                      <div class="mini-note">Total Quantity</div>
+                      <div class="h3 mb-0" id="cartUnitCount">0</div>
+                    </div>
+                  </div>
+                  <div class="col-md-4">
+                    <div class="content-card p-3 h-100">
+                      <div class="mini-note">Grand Total</div>
+                      <div class="h3 mb-0 text-success" id="saleGrandTotal">PHP 0.00</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-3">
+                  <button class="btn btn-success btn-lg" type="submit">Complete Sale</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="offcanvas offcanvas-end" tabindex="-1" id="salesHistoryPanel" aria-labelledby="salesHistoryPanelLabel">
+  <div class="offcanvas-header">
+    <div>
+      <h5 class="offcanvas-title" id="salesHistoryPanelLabel">Sales Transactions</h5>
+      <div class="mini-note">Review recent sales without leaving the cashier screen.</div>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body">
+    <div class="d-flex gap-2 flex-wrap mb-3">
+      <button type="button" data-sales-filter="all" class="btn <%= filter === 'all' ? 'btn-success' : 'btn-outline-secondary' %>">All</button>
+      <button type="button" data-sales-filter="today" class="btn <%= filter === 'today' ? 'btn-success' : 'btn-outline-secondary' %>">Today</button>
+      <button type="button" data-sales-filter="week" class="btn <%= filter === 'week' ? 'btn-success' : 'btn-outline-secondary' %>">This Week</button>
+      <button type="button" data-sales-filter="month" class="btn <%= filter === 'month' ? 'btn-success' : 'btn-outline-secondary' %>">This Month</button>
+    </div>
+    <div class="accordion" id="salesAccordion">
+      <% sales.forEach((sale) => { %>
+        <div class="accordion-item border rounded-4 overflow-hidden mb-3">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#sale-<%= sale.id %>">
+              <div class="row w-100 g-2 align-items-center pe-3">
+                <div class="col-sm-4 fw-semibold"><%= sale.transaction_code %></div>
+                <div class="col-sm-4"><%= formatLongDate(sale.sale_date) %></div>
+                <div class="col-sm-4 text-sm-end fw-bold text-success"><%= formatCurrency(sale.total_amount) %></div>
+              </div>
+            </button>
+          </h2>
+          <div id="sale-<%= sale.id %>" class="accordion-collapse collapse" data-bs-parent="#salesAccordion">
+            <div class="accordion-body">
+              <div class="mini-note mb-3"><%= sale.items.length %> item(s) paid via <span class="fw-semibold text-dark"><%= sale.payment_method %></span></div>
+              <div class="vstack gap-2">
+                <% sale.items.forEach((item) => { %>
+                  <div class="d-flex justify-content-between rounded-4 border p-3">
+                    <span><%= item.item_name %></span>
+                    <span class="mini-note"><%= item.quantity %> x <%= formatCurrency(item.price) %> = <strong class="text-dark"><%= formatCurrency(item.total) %></strong></span>
+                  </div>
+                <% }) %>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const inventoryItems = <%- JSON.stringify(inventory) %>;
+  const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
+  const searchInput = document.getElementById("quickItemSearch");
+  const quickQty = document.getElementById("quickQty");
+  const suggestions = document.getElementById("quickSuggestions");
+  const cartBody = document.getElementById("saleCartBody");
+  const hiddenInputs = document.getElementById("saleHiddenInputs");
+  const grandTotal = document.getElementById("saleGrandTotal");
+  const cartItemCount = document.getElementById("cartItemCount");
+  const cartUnitCount = document.getElementById("cartUnitCount");
+  const saleForm = document.getElementById("saleForm");
+  const addSelectedButton = document.getElementById("addSelectedItem");
+  const clearCartButton = document.getElementById("clearCartButton");
+  const newCustomerButton = document.getElementById("newCustomerButton");
+  const chipButtons = document.querySelectorAll(".pos-chip");
+  const salesAccordion = document.getElementById("salesAccordion");
+  const salesFilterButtons = [...document.querySelectorAll("[data-sales-filter]")];
+  const quickQtyAdjustButtons = [...document.querySelectorAll(".quick-qty-adjust")];
+  const salesLiveAlert = document.getElementById("salesLiveAlert");
+  const salesMetricTodayTotal = document.getElementById("salesMetricTodayTotal");
+  const salesMetricTodayTransactions = document.getElementById("salesMetricTodayTransactions");
+  const salesMetricTodayItems = document.getElementById("salesMetricTodayItems");
+  const salesMetricWeeklyTotal = document.getElementById("salesMetricWeeklyTotal");
+  const salesMetricMonthlyTotal = document.getElementById("salesMetricMonthlyTotal");
+  const quickPicksToday = document.getElementById("quickPicksToday");
+  const quickPicksWeek = document.getElementById("quickPicksWeek");
+  const quickPicksSmart = document.getElementById("quickPicksSmart");
+  let salesFilterController;
+
+  let filteredItems = [];
+  let highlightedIndex = 0;
+  let cart = [];
+  let quantityAdjustTimer;
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function focusSearch(preventScroll = true) {
+    searchInput.focus({ preventScroll });
+  }
+
+  function normalizeQuery(value) {
+    return String(value || "").trim().toLowerCase();
+  }
+
+  function normalizeQuantity(value) {
+    return Math.max(1, Number(value) || 1);
+  }
+
+  function setQuickQty(value) {
+    quickQty.value = String(normalizeQuantity(value));
+  }
+
+  function stepQuickQty(step) {
+    setQuickQty(normalizeQuantity(quickQty.value) + step);
+  }
+
+  function searchItems(query) {
+    const normalized = normalizeQuery(query);
+    if (!normalized) return inventoryItems.slice(0, 8);
+    return inventoryItems
+      .filter((item) => `${item.name} ${item.category}`.toLowerCase().includes(normalized))
+      .slice(0, 8);
+  }
+
+  function renderSuggestions(items) {
+    filteredItems = items;
+    highlightedIndex = 0;
+
+    if (!items.length) {
+      suggestions.innerHTML = "";
+      suggestions.classList.add("d-none");
+      return;
+    }
+
+    suggestions.innerHTML = items.map((item, index) => `
+      <button class="list-group-item list-group-item-action pos-suggestion ${index === 0 ? "active" : ""}" type="button" data-item-id="${item.id}">
+        <div class="d-flex justify-content-between gap-3">
+          <span class="fw-semibold">${escapeHtml(item.name)}</span>
+          <span>${peso.format(item.selling_price)}</span>
+        </div>
+        <div class="mini-note">${escapeHtml(item.category)} | ${item.stock_quantity} left</div>
+      </button>
+    `).join("");
+    suggestions.classList.remove("d-none");
+  }
+
+  function setSuggestionHighlight(index) {
+    const buttons = [...suggestions.querySelectorAll(".pos-suggestion")];
+    if (!buttons.length) return;
+    highlightedIndex = (index + buttons.length) % buttons.length;
+    buttons.forEach((button, currentIndex) => {
+      button.classList.toggle("active", currentIndex === highlightedIndex);
+    });
+  }
+
+  function addItemToCart(itemId, quantity) {
+    const item = inventoryItems.find((entry) => entry.id === Number(itemId));
+    const qty = normalizeQuantity(quantity);
+    if (!item) return;
+
+    const existing = cart.find((entry) => entry.id === item.id);
+    const nextQuantity = (existing ? existing.quantity : 0) + qty;
+    const safeQuantity = Math.min(nextQuantity, item.stock_quantity);
+
+    if (existing) {
+      existing.quantity = safeQuantity;
+    } else {
+      cart.push({
+        id: item.id,
+        name: item.name,
+        price: item.selling_price,
+        quantity: Math.min(qty, item.stock_quantity),
+        stock: item.stock_quantity
+      });
+    }
+
+    renderCart();
+    searchInput.value = "";
+    setQuickQty(1);
+    renderSuggestions(searchItems(""));
+    focusSearch(true);
+  }
+
+  function renderCart() {
+    if (!cart.length) {
+      cartBody.innerHTML = '<tr id="emptyCartRow"><td colspan="5" class="text-center py-4 mini-note">No items in the cart yet.</td></tr>';
+      hiddenInputs.innerHTML = "";
+      grandTotal.textContent = peso.format(0);
+      cartItemCount.textContent = "0";
+      cartUnitCount.textContent = "0";
+      return;
+    }
+
+    let totalAmount = 0;
+    let totalUnits = 0;
+
+    cartBody.innerHTML = cart.map((item, index) => {
+      const lineTotal = item.quantity * item.price;
+      totalAmount += lineTotal;
+      totalUnits += item.quantity;
+      return `
+        <tr>
+          <td>
+            <div class="fw-semibold">${escapeHtml(item.name)}</div>
+            <div class="mini-note">${item.stock} in stock</div>
+          </td>
+          <td class="text-end">${peso.format(item.price)}</td>
+          <td>
+            <input class="form-control form-control-sm cart-qty-input" type="number" min="1" max="${item.stock}" value="${item.quantity}" data-index="${index}" inputmode="numeric">
+            <div class="d-flex gap-1 mt-1">
+              <button class="btn btn-sm btn-outline-secondary cart-qty-step" type="button" data-index="${index}" data-step="-1">-</button>
+              <button class="btn btn-sm btn-outline-secondary cart-qty-step" type="button" data-index="${index}" data-step="1">+</button>
+            </div>
+          </td>
+          <td class="text-end fw-semibold">${peso.format(lineTotal)}</td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-outline-danger remove-cart-item" type="button" data-index="${index}"><i class="bi bi-x-lg"></i></button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+
+    hiddenInputs.innerHTML = cart.map((item) => `
+      <input type="hidden" name="itemId" value="${item.id}">
+      <input type="hidden" name="quantity" value="${item.quantity}">
+      <input type="hidden" name="price" value="${item.price}">
+    `).join("");
+
+    grandTotal.textContent = peso.format(totalAmount);
+    cartItemCount.textContent = String(cart.length);
+    cartUnitCount.textContent = String(totalUnits);
+  }
+
+  function addHighlightedSuggestion() {
+    if (!filteredItems.length) return;
+    addItemToCart(filteredItems[highlightedIndex].id, quickQty.value);
+  }
+
+  function resetForNewCustomer() {
+    cart = [];
+    renderCart();
+    searchInput.value = "";
+    setQuickQty(1);
+    renderSuggestions(searchItems(""));
+    focusSearch(true);
+  }
+
+  function formatLongDateClient(dateString) {
+    return new Date(`${dateString}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  function showSalesAlert(type, message) {
+    salesLiveAlert.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show mb-4" role="alert">${escapeHtml(message)}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+  }
+
+  function renderQuickPickButtons(container, items) {
+    container.innerHTML = items.map((item) => `
+      <button class="btn btn-outline-secondary pos-chip" type="button" data-item-id="${item.id}">
+        <span class="d-block fw-semibold">${escapeHtml(item.name)}</span>
+        <span class="mini-note">${peso.format(item.selling_price)}</span>
+      </button>
+    `).join("");
+    container.querySelectorAll(".pos-chip").forEach((button) => {
+      button.addEventListener("click", () => addItemToCart(button.dataset.itemId, quickQty.value));
+    });
+  }
+
+  function updateSalesMetrics(metrics) {
+    salesMetricTodayTotal.textContent = peso.format(metrics.todayTotal);
+    salesMetricTodayTransactions.textContent = String(metrics.todayTransactions);
+    salesMetricTodayItems.textContent = String(metrics.todayItems);
+    salesMetricWeeklyTotal.textContent = peso.format(metrics.weeklyTotal);
+    salesMetricMonthlyTotal.textContent = peso.format(metrics.monthlyTotal);
+  }
+
+  async function refreshSalesRecommendations() {
+    const response = await fetch("/api/sales/recommendations", { headers: { Accept: "application/json" } });
+    if (!response.ok) throw new Error("Failed to load recommendations.");
+    const payload = await response.json();
+    renderQuickPickButtons(quickPicksToday, payload.today || []);
+    renderQuickPickButtons(quickPicksWeek, payload.week || []);
+    renderQuickPickButtons(quickPicksSmart, payload.smart || []);
+  }
+
+  async function refreshSalesMetrics() {
+    const response = await fetch("/api/sales/metrics", { headers: { Accept: "application/json" } });
+    if (!response.ok) throw new Error("Failed to load sales metrics.");
+    updateSalesMetrics(await response.json());
+  }
+
+  function renderSalesAccordionItems(filteredSales) {
+    if (!filteredSales.length) {
+      salesAccordion.innerHTML = '<div class="mini-note text-center py-4">No sales matched this filter.</div>';
+    } else {
+      salesAccordion.innerHTML = filteredSales.map((sale) => `
+        <div class="accordion-item border rounded-4 overflow-hidden mb-3">
+          <h2 class="accordion-header">
+            <button class="accordion-button collapsed" data-bs-toggle="collapse" data-bs-target="#sale-${sale.id}">
+              <div class="row w-100 g-2 align-items-center pe-3">
+                <div class="col-sm-4 fw-semibold">${escapeHtml(sale.transaction_code)}</div>
+                <div class="col-sm-4">${formatLongDateClient(sale.sale_date)}</div>
+                <div class="col-sm-4 text-sm-end fw-bold text-success">${peso.format(sale.total_amount)}</div>
+              </div>
+            </button>
+          </h2>
+          <div id="sale-${sale.id}" class="accordion-collapse collapse" data-bs-parent="#salesAccordion">
+            <div class="accordion-body">
+              <div class="mini-note mb-3">${sale.items.length} item(s) paid via <span class="fw-semibold text-dark">${escapeHtml(sale.payment_method)}</span></div>
+              <div class="vstack gap-2">
+                ${sale.items.map((item) => `
+                  <div class="d-flex justify-content-between rounded-4 border p-3">
+                    <span>${escapeHtml(item.item_name)}</span>
+                    <span class="mini-note">${item.quantity} x ${peso.format(item.price)} = <strong class="text-dark">${peso.format(item.total)}</strong></span>
+                  </div>
+                `).join("")}
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join("");
+    }
+  }
+
+  function setSalesFilterButtons(filter) {
+    salesFilterButtons.forEach((button) => {
+      const active = button.dataset.salesFilter === filter;
+      button.classList.toggle("btn-success", active);
+      button.classList.toggle("btn-outline-secondary", !active);
+      button.disabled = active;
+    });
+  }
+
+  async function loadSalesFilter(filter) {
+    setSalesFilterButtons(filter);
+    salesFilterController?.abort();
+    salesFilterController = new AbortController();
+    try {
+      const response = await fetch(`/api/sales?filter=${encodeURIComponent(filter)}`, {
+        headers: { Accept: "application/json" },
+        signal: salesFilterController.signal
+      });
+      if (!response.ok) throw new Error("Failed to load sales.");
+      const payload = await response.json();
+      renderSalesAccordionItems(payload.sales);
+      const url = new URL(window.location.href);
+      url.searchParams.set("filter", payload.filter);
+      window.history.replaceState({}, "", url);
+    } catch (error) {
+      if (error.name !== "AbortError") console.error(error);
+    }
+  }
+
+  searchInput.addEventListener("input", () => {
+    renderSuggestions(searchItems(searchInput.value));
+  });
+
+  searchInput.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setSuggestionHighlight(highlightedIndex + 1);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setSuggestionHighlight(highlightedIndex - 1);
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      addHighlightedSuggestion();
+    }
+  });
+
+  quickQty.addEventListener("focus", () => quickQty.select());
+  quickQty.addEventListener("input", () => {
+    if (quickQty.value === "") return;
+    setQuickQty(quickQty.value);
+  });
+
+  function stopQuantityAdjust() {
+    window.clearInterval(quantityAdjustTimer);
+  }
+
+  quickQtyAdjustButtons.forEach((button) => {
+    const step = Number(button.dataset.step);
+    const startAdjust = () => {
+      stepQuickQty(step);
+      stopQuantityAdjust();
+      quantityAdjustTimer = window.setInterval(() => stepQuickQty(step), 90);
+    };
+
+    button.addEventListener("mousedown", startAdjust);
+    button.addEventListener("touchstart", startAdjust, { passive: true });
+    button.addEventListener("mouseup", stopQuantityAdjust);
+    button.addEventListener("mouseleave", stopQuantityAdjust);
+    button.addEventListener("touchend", stopQuantityAdjust);
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      stepQuickQty(step);
+    });
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "F2") {
+      event.preventDefault();
+      focusSearch(false);
+      searchInput.select();
+    }
+  });
+
+  suggestions.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-item-id]");
+    if (!button) return;
+    addItemToCart(button.dataset.itemId, quickQty.value);
+  });
+
+  addSelectedButton.addEventListener("click", addHighlightedSuggestion);
+  clearCartButton.addEventListener("click", resetForNewCustomer);
+  newCustomerButton.addEventListener("click", resetForNewCustomer);
+
+  chipButtons.forEach((button) => {
+    button.addEventListener("click", () => addItemToCart(button.dataset.itemId, quickQty.value));
+  });
+
+  salesFilterButtons.forEach((button) => {
+    button.addEventListener("click", () => loadSalesFilter(button.dataset.salesFilter));
+  });
+
+  cartBody.addEventListener("focusin", (event) => {
+    const input = event.target.closest(".cart-qty-input");
+    if (input) input.select();
+  });
+
+  cartBody.addEventListener("input", (event) => {
+    const input = event.target.closest(".cart-qty-input");
+    if (!input) return;
+    const index = Number(input.dataset.index);
+    if (input.value === "") return;
+    cart[index].quantity = Math.max(1, Math.min(Number(input.value) || 1, cart[index].stock));
+    renderCart();
+  });
+
+  cartBody.addEventListener("click", (event) => {
+    const removeButton = event.target.closest(".remove-cart-item");
+    if (removeButton) {
+      cart.splice(Number(removeButton.dataset.index), 1);
+      renderCart();
+      return;
+    }
+
+    const stepButton = event.target.closest(".cart-qty-step");
+    if (!stepButton) return;
+    const index = Number(stepButton.dataset.index);
+    const step = Number(stepButton.dataset.step);
+    cart[index].quantity = Math.max(1, Math.min(cart[index].quantity + step, cart[index].stock));
+    renderCart();
+  });
+
+  saleForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!cart.length) {
+      focusSearch(false);
+      return;
+    }
+
+    const formData = new FormData(saleForm);
+    const payload = {
+      _csrf: formData.get("_csrf"),
+      saleDate: formData.get("saleDate"),
+      paymentMethod: formData.get("paymentMethod"),
+      items: cart.map((item) => ({
+        inventoryItemId: item.id,
+        quantity: item.quantity,
+        price: item.price
+      }))
+    };
+
+    fetch("/api/sales", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      },
+      body: JSON.stringify(payload)
+    })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Failed to save sale.");
+        showSalesAlert("success", data.message || "Sale recorded successfully.");
+        resetForNewCustomer();
+        if (data.metrics) updateSalesMetrics(data.metrics);
+        if (data.recommendations) {
+          renderQuickPickButtons(quickPicksToday, data.recommendations.today || []);
+          renderQuickPickButtons(quickPicksWeek, data.recommendations.week || []);
+          renderQuickPickButtons(quickPicksSmart, data.recommendations.smart || []);
+        }
+        loadSalesFilter("all");
+      })
+      .catch((error) => {
+        showSalesAlert("danger", error.message);
+      });
+  });
+
+  renderSuggestions(searchItems(""));
+  renderCart();
+  setQuickQty(quickQty.value);
+  focusSearch(true);
+  loadSalesFilter("<%= filter %>");
+  refreshSalesMetrics().catch(console.error);
+  refreshSalesRecommendations().catch(console.error);
+</script>
+</body>
+</html>

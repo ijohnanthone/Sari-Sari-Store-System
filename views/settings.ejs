@@ -1,0 +1,93 @@
+<%- include("partials/head") %>
+<div class="app-shell d-lg-flex">
+  <%- include("partials/sidebar") %>
+  <main class="flex-grow-1">
+    <%- include("partials/topbar") %>
+    <section class="p-3 p-lg-4">
+      <%- include("partials/flash") %>
+      <ul class="nav nav-pills gap-2 mb-4" role="tablist">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#store-tab" type="button">Store Info</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#profile-tab" type="button">Profile</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#notifications-tab" type="button">Notifications</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#appearance-tab" type="button">Appearance</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#data-tab" type="button">Data</button></li>
+      </ul>
+      <div class="tab-content">
+        <div class="tab-pane fade show active" id="store-tab">
+          <div class="content-card p-4">
+            <div class="section-title mb-3">Store Information</div>
+            <form action="/settings/store" method="post" class="row g-3">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <div class="col-md-6"><label class="form-label">Store Name</label><input class="form-control" name="storeName" value="<%= settings.store_name %>" required></div>
+              <div class="col-md-6"><label class="form-label">Store Address</label><input class="form-control" name="storeAddress" value="<%= settings.store_address %>" required></div>
+              <div class="col-md-4"><label class="form-label">Contact Number</label><input class="form-control" name="contactNumber" value="<%= settings.contact_number %>" required></div>
+              <div class="col-md-4"><label class="form-label">Tax ID / TIN</label><input class="form-control" name="taxId" value="<%= settings.tax_id %>"></div>
+              <div class="col-md-4"><label class="form-label">Operating Hours</label><input class="form-control" name="operatingHours" value="<%= settings.operating_hours %>" required></div>
+              <div class="col-12"><button class="btn btn-success">Save Store Settings</button></div>
+            </form>
+          </div>
+        </div>
+        <div class="tab-pane fade" id="profile-tab">
+          <div class="content-card p-4 mb-4">
+            <div class="section-title mb-3">User Profile</div>
+            <form action="/settings/profile" method="post" class="row g-3">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <div class="col-md-4"><label class="form-label">Full Name</label><input class="form-control" name="fullName" value="<%= userProfile.full_name %>" required></div>
+              <div class="col-md-4"><label class="form-label">Email</label><input class="form-control" type="email" name="email" value="<%= userProfile.email %>" required></div>
+              <div class="col-md-4"><label class="form-label">Phone</label><input class="form-control" name="phone" value="<%= userProfile.phone %>" required></div>
+              <div class="col-12"><button class="btn btn-success">Update Profile</button></div>
+            </form>
+          </div>
+          <div class="content-card p-4">
+            <div class="section-title mb-3">Security</div>
+            <form action="/settings/password" method="post" class="row g-3">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <div class="col-md-4"><label class="form-label">Current Password</label><input class="form-control" type="password" name="currentPassword" required></div>
+              <div class="col-md-4"><label class="form-label">New Password</label><input class="form-control" type="password" name="newPassword" required></div>
+              <div class="col-md-4"><label class="form-label">Confirm Password</label><input class="form-control" type="password" name="confirmPassword" required></div>
+              <div class="col-12"><button class="btn btn-success">Change Password</button></div>
+            </form>
+          </div>
+        </div>
+        <div class="tab-pane fade" id="notifications-tab">
+          <div class="content-card p-4">
+            <div class="section-title mb-3">Notification Preferences</div>
+            <form action="/settings/notifications" method="post" class="vstack gap-3">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="lowStockAlert" <%= settings.low_stock_alert ? 'checked' : '' %>><label class="form-check-label">Low Stock Alerts</label></div>
+              <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="outOfStockAlert" <%= settings.out_of_stock_alert ? 'checked' : '' %>><label class="form-check-label">Out of Stock Alerts</label></div>
+              <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="dailySalesAlert" <%= settings.daily_sales_alert ? 'checked' : '' %>><label class="form-check-label">Daily Sales Report</label></div>
+              <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="weeklySalesAlert" <%= settings.weekly_sales_alert ? 'checked' : '' %>><label class="form-check-label">Weekly Sales Report</label></div>
+              <div><button class="btn btn-success">Save Preferences</button></div>
+            </form>
+          </div>
+        </div>
+        <div class="tab-pane fade" id="appearance-tab">
+          <div class="content-card p-4">
+            <div class="section-title mb-3">Appearance Settings</div>
+            <form action="/settings/appearance" method="post" class="row g-3">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <div class="col-md-6"><label class="form-label">Theme</label><select class="form-select" name="theme"><option value="Light Mode" <%= appearance.theme === 'Light Mode' ? 'selected' : '' %>>Light Mode</option><option value="Dark Mode" <%= appearance.theme === 'Dark Mode' ? 'selected' : '' %>>Dark Mode</option></select></div>
+              <div class="col-md-6"><label class="form-label">Color Scheme</label><select class="form-select" name="colorScheme"><option <%= settings.color_scheme === 'Emerald' ? 'selected' : '' %>>Emerald</option><option <%= settings.color_scheme === 'Blue' ? 'selected' : '' %>>Blue</option><option <%= settings.color_scheme === 'Amber' ? 'selected' : '' %>>Amber</option></select></div>
+              <div class="col-12 mini-note">Theme changes apply across the whole app, including the login page.</div>
+              <div class="col-12"><button class="btn btn-success">Save Appearance</button></div>
+            </form>
+          </div>
+        </div>
+        <div class="tab-pane fade" id="data-tab">
+          <div class="content-card p-4">
+            <div class="section-title mb-3">Data Management</div>
+            <div class="row g-3">
+              <div class="col-md-6"><div class="border rounded-4 p-4 h-100"><div class="fw-semibold mb-2">Export Data</div><p class="mini-note">Download your inventory or sales records as CSV.</p><div class="d-flex gap-2"><a class="btn btn-outline-primary" href="/settings/export/inventory.csv">Inventory CSV</a><a class="btn btn-outline-primary" href="/settings/export/sales.csv">Sales CSV</a></div></div></div>
+              <div class="col-md-6"><div class="border rounded-4 p-4 h-100"><div class="fw-semibold mb-2">Backup Database</div><p class="mini-note">Download the SQLite database file directly.</p><a class="btn btn-outline-success" href="/settings/backup">Create Backup</a></div></div>
+              <div class="col-12"><div class="border border-danger rounded-4 p-4"><div class="fw-semibold text-danger mb-2">Reset Data</div><p class="mini-note">Restore the seeded sample content from the Figma concept. This cannot be undone.</p><form method="post" action="/settings/reset" onsubmit="return confirm('Reset all data to the sample content?');"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-danger">Reset All Data</button></form></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

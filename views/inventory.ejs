@@ -1,0 +1,261 @@
+<%- include("partials/head") %>
+<div class="app-shell d-lg-flex">
+  <%- include("partials/sidebar") %>
+  <main class="flex-grow-1">
+    <%- include("partials/topbar") %>
+    <section class="p-3 p-lg-4">
+      <%- include("partials/flash") %>
+      <div class="row g-4 mb-4">
+        <div class="col-md-6 col-xl-3"><a class="metric-card metric-card-link p-4 d-block text-reset text-decoration-none" href="/inventory"><div class="mini-note">Total Items</div><div class="display-6 fw-bold" id="inventorySummaryTotal"><%= summary.total %></div></a></div>
+        <div class="col-md-6 col-xl-3"><a class="metric-card metric-card-link p-4 d-block text-reset text-decoration-none" href="/inventory?status=In%20Stock"><div class="mini-note">In Stock</div><div class="display-6 fw-bold text-success" id="inventorySummaryInStock"><%= summary.inStock %></div></a></div>
+        <div class="col-md-6 col-xl-3"><a class="metric-card metric-card-link p-4 d-block text-reset text-decoration-none" href="/inventory?status=Low%20Stock"><div class="mini-note">Low Stock</div><div class="display-6 fw-bold text-warning" id="inventorySummaryLowStock"><%= summary.lowStock %></div></a></div>
+        <div class="col-md-6 col-xl-3"><a class="metric-card metric-card-link p-4 d-block text-reset text-decoration-none" href="/inventory?status=Out%20of%20Stock"><div class="mini-note">Out of Stock</div><div class="display-6 fw-bold text-danger" id="inventorySummaryOutOfStock"><%= summary.outOfStock %></div></a></div>
+      </div>
+      <div class="content-card p-4">
+        <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center mb-4">
+          <div><div class="section-title">Inventory Items</div><div class="mini-note">Matches the Figma inventory table and modal fields.</div></div>
+          <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addItemModal"><i class="bi bi-plus-lg me-2"></i>Add Item</button>
+        </div>
+        <form class="row g-3 mb-3" method="get" action="/inventory" id="inventoryFilterForm">
+          <div class="col-md-6">
+            <div class="input-group position-relative">
+              <span class="input-group-text"><i class="bi bi-search"></i></span>
+              <input class="form-control" id="inventoryLiveSearch" name="search" value="<%= search %>" placeholder="Search items by name or category" autocomplete="off">
+            </div>
+            <div class="pos-suggestions list-group mt-2 d-none" id="inventorySuggestions"></div>
+          </div>
+          <div class="col-md-3">
+            <select class="form-select" name="status" id="inventoryStatusFilter">
+              <option value="all" <%= status === "all" ? "selected" : "" %>>All statuses</option>
+              <option value="In Stock" <%= status === "In Stock" ? "selected" : "" %>>In Stock</option>
+              <option value="Low Stock" <%= status === "Low Stock" ? "selected" : "" %>>Low Stock</option>
+              <option value="Out of Stock" <%= status === "Out of Stock" ? "selected" : "" %>>Out of Stock</option>
+            </select>
+          </div>
+          <div class="col-md-auto"><button class="btn btn-outline-secondary" type="button" id="inventorySearchButton">Search</button></div>
+          <% if (search || status !== "all") { %>
+            <div class="col-md-auto"><a class="btn btn-outline-secondary" href="/inventory" id="inventoryClearLink">Clear</a></div>
+          <% } %>
+        </form>
+        <div class="mini-note mb-3 d-none" id="inventoryFilterSummary"></div>
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead><tr><th>Item Name</th><th>Category</th><th class="text-end">Stock Qty</th><th class="text-end">Unit Price</th><th class="text-end">Selling Price</th><th class="text-end">Profit</th><th>Status</th><th class="text-end">Actions</th></tr></thead>
+            <tbody id="inventoryTableBody">
+              <% items.forEach((item) => { %>
+                <tr data-item-name="<%= item.name.toLowerCase() %>" data-item-category="<%= item.category.toLowerCase() %>" data-item-status="<%= item.status %>">
+                  <td class="fw-semibold"><%= item.name %></td>
+                  <td><%= item.category %></td>
+                  <td class="text-end"><%= item.stock_quantity %></td>
+                  <td class="text-end"><%= formatCurrency(item.unit_price) %></td>
+                  <td class="text-end"><%= formatCurrency(item.selling_price) %></td>
+                  <td class="text-end text-success fw-semibold"><%= formatCurrency(item.profit) %></td>
+                  <td>
+                    <% if (item.status === "In Stock") { %><span class="badge badge-soft-success">In Stock</span>
+                    <% } else if (item.status === "Low Stock") { %><span class="badge badge-soft-warning">Low Stock</span>
+                    <% } else { %><span class="badge badge-soft-danger">Out of Stock</span><% } %>
+                  </td>
+                  <td class="text-end">
+                    <button class="btn btn-sm btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#editItemModal-<%= item.id %>"><i class="bi bi-pencil"></i></button>
+                    <form class="d-inline" method="post" action="/inventory/<%= item.id %>/delete" onsubmit="return confirm('Delete this item?');"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+                  </td>
+                </tr>
+              <% }) %>
+              <tr id="inventoryEmptyRow" class="<%= items.length ? 'd-none' : '' %>">
+                <td colspan="8" class="text-center py-4 mini-note">No inventory items matched the current filters.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="modal fade" id="addItemModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <form method="post" action="/inventory/add">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="modal-header"><h5 class="modal-title">Add Inventory Item</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-8"><label class="form-label">Item Name</label><input class="form-control" name="name" required></div>
+            <div class="col-md-4"><label class="form-label">Category</label><input class="form-control" name="category" list="categoryList" required></div>
+            <div class="col-md-4"><label class="form-label">Stock Quantity</label><input class="form-control" type="number" name="stockQuantity" min="0" required></div>
+            <div class="col-md-4"><label class="form-label">Reorder Level</label><input class="form-control" type="number" name="reorderLevel" min="0" required></div>
+            <div class="col-md-4"><label class="form-label">Unit Price</label><input class="form-control" type="number" step="0.01" name="unitPrice" min="0" required></div>
+            <div class="col-md-4"><label class="form-label">Selling Price</label><input class="form-control" type="number" step="0.01" name="sellingPrice" min="0" required></div>
+          </div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-success">Save Item</button></div>
+      </form>
+    </div>
+  </div>
+</div>
+<% items.forEach((item) => { %>
+  <div class="modal fade" id="editItemModal-<%= item.id %>" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <form method="post" action="/inventory/<%= item.id %>/update">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="modal-header"><h5 class="modal-title">Edit Inventory Item</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+          <div class="modal-body">
+            <div class="row g-3">
+              <div class="col-md-8"><label class="form-label">Item Name</label><input class="form-control" name="name" value="<%= item.name %>" required></div>
+              <div class="col-md-4"><label class="form-label">Category</label><input class="form-control" name="category" list="categoryList" value="<%= item.category %>" required></div>
+              <div class="col-md-4"><label class="form-label">Stock Quantity</label><input class="form-control" type="number" name="stockQuantity" min="0" value="<%= item.stock_quantity %>" required></div>
+              <div class="col-md-4"><label class="form-label">Reorder Level</label><input class="form-control" type="number" name="reorderLevel" min="0" value="<%= item.reorder_level %>" required></div>
+              <div class="col-md-4"><label class="form-label">Unit Price</label><input class="form-control" type="number" step="0.01" name="unitPrice" min="0" value="<%= item.unit_price %>" required></div>
+              <div class="col-md-4"><label class="form-label">Selling Price</label><input class="form-control" type="number" step="0.01" name="sellingPrice" min="0" value="<%= item.selling_price %>" required></div>
+            </div>
+          </div>
+          <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-success">Update Item</button></div>
+        </form>
+      </div>
+    </div>
+  </div>
+<% }) %>
+<datalist id="categoryList"><% categories.forEach((category) => { %><option value="<%= category %>"></option><% }) %></datalist>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
+  const csrfToken = "<%= csrfToken %>";
+  const inventorySearch = document.getElementById("inventoryLiveSearch");
+  const inventoryStatus = document.getElementById("inventoryStatusFilter");
+  const inventoryTableBody = document.getElementById("inventoryTableBody");
+  const inventorySuggestions = document.getElementById("inventorySuggestions");
+  const inventorySummary = document.getElementById("inventoryFilterSummary");
+  const inventorySearchButton = document.getElementById("inventorySearchButton");
+  const inventorySummaryTotal = document.getElementById("inventorySummaryTotal");
+  const inventorySummaryInStock = document.getElementById("inventorySummaryInStock");
+  const inventorySummaryLowStock = document.getElementById("inventorySummaryLowStock");
+  const inventorySummaryOutOfStock = document.getElementById("inventorySummaryOutOfStock");
+  let inventoryFetchController;
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function renderInventorySuggestions(items) {
+    const query = inventorySearch.value.trim();
+    if (!query || !items.length) {
+      inventorySuggestions.innerHTML = "";
+      inventorySuggestions.classList.add("d-none");
+      return;
+    }
+
+    inventorySuggestions.innerHTML = items.slice(0, 6).map((item) => `
+      <button type="button" class="list-group-item list-group-item-action pos-suggestion" data-item-name="${escapeHtml(item.name)}">
+        <div class="fw-semibold">${escapeHtml(item.name)}</div>
+        <div class="mini-note">${escapeHtml(item.category)} | ${escapeHtml(item.status)}</div>
+      </button>
+    `).join("");
+    inventorySuggestions.classList.remove("d-none");
+  }
+
+  function renderInventoryRows(items) {
+    if (!items.length) {
+      inventoryTableBody.innerHTML = '<tr id="inventoryEmptyRow"><td colspan="8" class="text-center py-4 mini-note">No inventory items matched the current filters.</td></tr>';
+      return;
+    }
+
+    inventoryTableBody.innerHTML = items.map((item) => `
+      <tr>
+        <td class="fw-semibold">${escapeHtml(item.name)}</td>
+        <td>${escapeHtml(item.category)}</td>
+        <td class="text-end">${item.stock_quantity}</td>
+        <td class="text-end">${peso.format(item.unit_price)}</td>
+        <td class="text-end">${peso.format(item.selling_price)}</td>
+        <td class="text-end text-success fw-semibold">${peso.format(item.profit)}</td>
+        <td>${item.status === "In Stock" ? '<span class="badge badge-soft-success">In Stock</span>' : item.status === "Low Stock" ? '<span class="badge badge-soft-warning">Low Stock</span>' : '<span class="badge badge-soft-danger">Out of Stock</span>'}</td>
+        <td class="text-end">
+          <button class="btn btn-sm btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#editItemModal-${item.id}"><i class="bi bi-pencil"></i></button>
+          <form class="d-inline" method="post" action="/inventory/${item.id}/delete" onsubmit="return confirm('Delete this item?');">
+            <input type="hidden" name="_csrf" value="${csrfToken}">
+            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+          </form>
+        </td>
+      </tr>
+    `).join("");
+  }
+
+  function updateInventorySummary(count) {
+    const query = inventorySearch.value.trim();
+    const status = inventoryStatus.value;
+    if (query || status !== "all") {
+      inventorySummary.classList.remove("d-none");
+      inventorySummary.textContent = `Showing ${count} ${status === "all" ? "items" : status.toLowerCase()}${query ? ` matching "${query}"` : ""}.`;
+    } else {
+      inventorySummary.classList.add("d-none");
+      inventorySummary.textContent = "";
+    }
+  }
+
+  function updateInventoryCards(summary) {
+    inventorySummaryTotal.textContent = String(summary.total);
+    inventorySummaryInStock.textContent = String(summary.inStock);
+    inventorySummaryLowStock.textContent = String(summary.lowStock);
+    inventorySummaryOutOfStock.textContent = String(summary.outOfStock);
+  }
+
+  async function loadInventoryResults() {
+    inventoryFetchController?.abort();
+    inventoryFetchController = new AbortController();
+    const params = new URLSearchParams({
+      search: inventorySearch.value.trim(),
+      status: inventoryStatus.value
+    });
+
+    try {
+      const response = await fetch(`/api/inventory?${params.toString()}`, {
+        headers: { Accept: "application/json" },
+        signal: inventoryFetchController.signal
+      });
+      if (!response.ok) throw new Error("Failed to load inventory.");
+      const payload = await response.json();
+      renderInventoryRows(payload.items);
+      renderInventorySuggestions(payload.items);
+      updateInventoryCards(payload.summary);
+      updateInventorySummary(payload.count);
+      const url = new URL(window.location.href);
+      if (payload.search) url.searchParams.set("search", payload.search); else url.searchParams.delete("search");
+      if (payload.status && payload.status !== "all") url.searchParams.set("status", payload.status); else url.searchParams.delete("status");
+      window.history.replaceState({}, "", url);
+    } catch (error) {
+      if (error.name !== "AbortError") console.error(error);
+    }
+  }
+
+  let inventorySearchTimer;
+  inventorySearch.addEventListener("input", () => {
+    window.clearTimeout(inventorySearchTimer);
+    inventorySearchTimer = window.setTimeout(loadInventoryResults, 160);
+  });
+  inventoryStatus.addEventListener("change", loadInventoryResults);
+  inventorySearchButton.addEventListener("click", loadInventoryResults);
+  inventorySuggestions.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-item-name]");
+    if (!button) return;
+    inventorySearch.value = button.dataset.itemName;
+    loadInventoryResults();
+    inventorySuggestions.classList.add("d-none");
+  });
+  inventorySearch.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      loadInventoryResults();
+      inventorySuggestions.classList.add("d-none");
+    }
+  });
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest("#inventoryFilterForm")) inventorySuggestions.classList.add("d-none");
+  });
+  loadInventoryResults();
+</script>
+</body>
+</html>

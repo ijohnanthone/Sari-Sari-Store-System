@@ -1,0 +1,181 @@
+<%- include("partials/head") %>
+<div class="app-shell d-lg-flex">
+  <%- include("partials/sidebar") %>
+  <main class="flex-grow-1">
+    <%- include("partials/topbar") %>
+    <section class="p-3 p-lg-4">
+      <%- include("partials/flash") %>
+      <div class="row g-4 mb-4">
+        <div class="col-md-6 col-xl-4"><a class="metric-card metric-card-link p-4 h-100 d-block text-reset text-decoration-none" href="/inventory"><div class="d-flex justify-content-between"><div><div class="mini-note">Total Products</div><div class="display-6 fw-bold" id="dashboardMetricTotalProducts"><%= metrics.totalProducts %></div><div class="mini-note">Current inventory records</div></div><div class="stat-icon blue"><i class="bi bi-box-seam fs-4"></i></div></div></a></div>
+        <div class="col-md-6 col-xl-4"><a class="metric-card metric-card-link p-4 h-100 d-block text-reset text-decoration-none" href="/inventory?status=Low%20Stock"><div class="d-flex justify-content-between"><div><div class="mini-note">Low Stock Items</div><div class="display-6 fw-bold text-warning" id="dashboardMetricLowStock"><%= metrics.lowStockItems %></div><div class="mini-note">Need attention soon</div></div><div class="stat-icon yellow"><i class="bi bi-exclamation-triangle fs-4"></i></div></div></a></div>
+        <div class="col-md-6 col-xl-4"><a class="metric-card metric-card-link p-4 h-100 d-block text-reset text-decoration-none" href="/inventory?status=Out%20of%20Stock"><div class="d-flex justify-content-between"><div><div class="mini-note">Out of Stock</div><div class="display-6 fw-bold text-danger" id="dashboardMetricOutOfStock"><%= metrics.outOfStockItems %></div><div class="mini-note">Reorder immediately</div></div><div class="stat-icon red"><i class="bi bi-x-octagon fs-4"></i></div></div></a></div>
+        <div class="col-md-6 col-xl-4"><div class="metric-card p-4 h-100"><div class="d-flex justify-content-between"><div><div class="mini-note">Daily Sales</div><div class="h2 fw-bold" id="dashboardMetricDailySales"><%= formatCurrency(metrics.dailySales) %></div><div class="mini-note">As of <%= currentDateLabel %></div></div><div class="stat-icon green"><i class="bi bi-cash-stack fs-4"></i></div></div></div></div>
+        <div class="col-md-6 col-xl-4"><div class="metric-card p-4 h-100"><div class="d-flex justify-content-between"><div><div class="mini-note">Weekly Sales</div><div class="h2 fw-bold" id="dashboardMetricWeeklySales"><%= formatCurrency(metrics.weeklySales) %></div><div class="mini-note">Rolling 7-day performance</div></div><div class="stat-icon teal"><i class="bi bi-calendar-week fs-4"></i></div></div></div></div>
+        <div class="col-md-6 col-xl-4"><div class="metric-card p-4 h-100"><div class="d-flex justify-content-between"><div><div class="mini-note">Monthly Sales</div><div class="h2 fw-bold" id="dashboardMetricMonthlySales"><%= formatCurrency(metrics.monthlySales) %></div><div class="mini-note">Rolling 30-day revenue</div></div><div class="stat-icon cyan"><i class="bi bi-graph-up-arrow fs-4"></i></div></div></div></div>
+      </div>
+      <div class="row g-4 mb-4">
+        <div class="col-12">
+          <div class="content-card p-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+              <div>
+                <div class="section-title" id="dashboardChartTitle"><%= chartTitle %></div>
+                <div class="mini-note">Switch the range to view daily, weekly, monthly, or yearly sales.</div>
+              </div>
+              <div class="d-flex gap-2 flex-wrap">
+                <button type="button" data-chart-range="daily" class="btn <%= chartRange === 'daily' ? 'btn-success' : 'btn-outline-secondary' %>">Daily</button>
+                <button type="button" data-chart-range="weekly" class="btn <%= chartRange === 'weekly' ? 'btn-success' : 'btn-outline-secondary' %>">Weekly</button>
+                <button type="button" data-chart-range="monthly" class="btn <%= chartRange === 'monthly' ? 'btn-success' : 'btn-outline-secondary' %>">Monthly</button>
+                <button type="button" data-chart-range="yearly" class="btn <%= chartRange === 'yearly' ? 'btn-success' : 'btn-outline-secondary' %>">Yearly</button>
+              </div>
+            </div>
+            <div class="row g-4">
+              <div class="col-xl-6"><div class="h-100"><div class="mini-note mb-2">Bar View</div><canvas id="weeklySalesChart" height="180"></canvas></div></div>
+              <div class="col-xl-6"><div class="h-100"><div class="mini-note mb-2">Trend View</div><canvas id="salesTrendChart" height="180"></canvas></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row g-4">
+        <div class="col-xl-6">
+          <div class="content-card p-4 h-100">
+            <div class="section-title mb-3"><i class="bi bi-trophy text-warning me-2"></i>Best Selling Item This Month</div>
+            <% if (bestSellingItem) { %>
+              <div class="top-item-card rounded-4 p-4 d-flex gap-3 align-items-center" id="dashboardBestSellingCard">
+                <div class="icon-chip"><i class="bi bi-award fs-4"></i></div>
+                <div><div class="fw-bold fs-5"><%= bestSellingItem.name %></div><div class="mini-note"><%= bestSellingItem.quantity_sold %> units sold</div><div class="text-success fw-semibold"><%= formatCurrency(bestSellingItem.revenue) %> revenue</div></div>
+              </div>
+            <% } %>
+          </div>
+        </div>
+        <div class="col-xl-6">
+          <div class="content-card p-4 h-100">
+            <div class="section-title mb-3 text-warning"><i class="bi bi-exclamation-triangle me-2"></i>Low Stock Alert</div>
+            <div class="vstack gap-3" id="dashboardLowStockList">
+              <% lowStockItems.forEach((item) => { %>
+                <a class="dashboard-alert-link d-flex justify-content-between align-items-center rounded-4 p-3 text-reset text-decoration-none" href="/inventory?status=<%= encodeURIComponent(item.status) %>&search=<%= encodeURIComponent(item.name) %>" style="background: rgba(245, 158, 11, 0.08);">
+                  <div><div class="fw-semibold"><%= item.name %></div><div class="mini-note"><%= item.category %></div></div>
+                  <div class="text-end"><div class="fw-bold <%= item.status === 'Out of Stock' ? 'text-danger' : 'text-warning' %>"><%= item.stock_quantity %> units</div><div class="mini-note"><%= item.status %></div></div>
+                </a>
+              <% }) %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+  const chartTitleElement = document.getElementById("dashboardChartTitle");
+  const chartButtons = [...document.querySelectorAll("[data-chart-range]")];
+  const dashboardMetricTotalProducts = document.getElementById("dashboardMetricTotalProducts");
+  const dashboardMetricLowStock = document.getElementById("dashboardMetricLowStock");
+  const dashboardMetricOutOfStock = document.getElementById("dashboardMetricOutOfStock");
+  const dashboardMetricDailySales = document.getElementById("dashboardMetricDailySales");
+  const dashboardMetricWeeklySales = document.getElementById("dashboardMetricWeeklySales");
+  const dashboardMetricMonthlySales = document.getElementById("dashboardMetricMonthlySales");
+  const dashboardBestSellingCard = document.getElementById("dashboardBestSellingCard");
+  const dashboardLowStockList = document.getElementById("dashboardLowStockList");
+  const rootStyles = getComputedStyle(document.body);
+  const lineColor = rootStyles.getPropertyValue("--line-soft").trim();
+  const textColor = rootStyles.getPropertyValue("--text-muted").trim();
+  const emerald = rootStyles.getPropertyValue("--brand-emerald").trim();
+  const teal = rootStyles.getPropertyValue("--brand-teal").trim();
+
+  const sharedOptions = {
+    responsive: true,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: textColor }, grid: { color: lineColor } },
+      y: { ticks: { color: textColor }, grid: { color: lineColor } }
+    }
+  };
+
+  const weeklySalesChart = new Chart(document.getElementById("weeklySalesChart"), {
+    type: "bar",
+    data: { labels: <%- JSON.stringify(chartLabels) %>, datasets: [{ label: "Sales", data: <%- JSON.stringify(chartValues) %>, borderRadius: 10, backgroundColor: emerald }] },
+    options: sharedOptions
+  });
+
+  const salesTrendChart = new Chart(document.getElementById("salesTrendChart"), {
+    type: "line",
+    data: { labels: <%- JSON.stringify(chartLabels) %>, datasets: [{ label: "Sales", data: <%- JSON.stringify(chartValues) %>, borderColor: teal, pointBackgroundColor: teal, fill: false, tension: 0.35 }] },
+    options: sharedOptions
+  });
+
+  function setActiveRange(range) {
+    chartButtons.forEach((button) => {
+      const active = button.dataset.chartRange === range;
+      button.classList.toggle("btn-success", active);
+      button.classList.toggle("btn-outline-secondary", !active);
+      button.disabled = active;
+    });
+  }
+
+  async function loadChartRange(range) {
+    setActiveRange(range);
+    try {
+      const response = await fetch(`/api/dashboard/chart?range=${encodeURIComponent(range)}`, {
+        headers: { Accept: "application/json" }
+      });
+      if (!response.ok) throw new Error("Failed to load chart data.");
+      const series = await response.json();
+      chartTitleElement.textContent = series.title;
+      weeklySalesChart.data.labels = series.labels;
+      weeklySalesChart.data.datasets[0].data = series.values;
+      weeklySalesChart.update();
+      salesTrendChart.data.labels = series.labels;
+      salesTrendChart.data.datasets[0].data = series.values;
+      salesTrendChart.update();
+      const url = new URL(window.location.href);
+      url.searchParams.set("range", range);
+      window.history.replaceState({}, "", url);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  async function loadDashboardOverview() {
+    try {
+      const response = await fetch("/api/dashboard/overview", { headers: { Accept: "application/json" } });
+      if (!response.ok) throw new Error("Failed to load dashboard overview.");
+      const payload = await response.json();
+      dashboardMetricTotalProducts.textContent = String(payload.metrics.totalProducts);
+      dashboardMetricLowStock.textContent = String(payload.metrics.lowStockItems);
+      dashboardMetricOutOfStock.textContent = String(payload.metrics.outOfStockItems);
+      dashboardMetricDailySales.textContent = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(payload.metrics.dailySales);
+      dashboardMetricWeeklySales.textContent = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(payload.metrics.weeklySales);
+      dashboardMetricMonthlySales.textContent = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(payload.metrics.monthlySales);
+
+      if (payload.bestSellingItem && dashboardBestSellingCard) {
+        dashboardBestSellingCard.innerHTML = `
+          <div class="icon-chip"><i class="bi bi-award fs-4"></i></div>
+          <div><div class="fw-bold fs-5">${payload.bestSellingItem.name}</div><div class="mini-note">${payload.bestSellingItem.quantity_sold} units sold</div><div class="text-success fw-semibold">${new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(payload.bestSellingItem.revenue)} revenue</div></div>
+        `;
+      }
+
+      if (dashboardLowStockList) {
+        dashboardLowStockList.innerHTML = payload.lowStockItems.map((item) => `
+          <a class="dashboard-alert-link d-flex justify-content-between align-items-center rounded-4 p-3 text-reset text-decoration-none" href="/inventory?status=${encodeURIComponent(item.status)}&search=${encodeURIComponent(item.name)}" style="background: rgba(245, 158, 11, 0.08);">
+            <div><div class="fw-semibold">${item.name}</div><div class="mini-note">${item.category}</div></div>
+            <div class="text-end"><div class="fw-bold ${item.status === "Out of Stock" ? "text-danger" : "text-warning"}">${item.stock_quantity} units</div><div class="mini-note">${item.status}</div></div>
+          </a>
+        `).join("");
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  chartButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      loadChartRange(button.dataset.chartRange);
+    });
+  });
+
+  setActiveRange("<%= chartRange %>");
+  loadDashboardOverview();
+</script>
+</body>
+</html>
