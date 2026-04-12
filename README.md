@@ -1,6 +1,11 @@
 # Sari-Sari Store Management System
 
-A Bootstrap-based Sari-Sari Store Management System built with Express, EJS, and SQLite.
+This peoject is Bootstrap-based Sari-Sari Store Management System built with Express, EJS, and SQLite for System architecture subject from University of Cebu.
+
+## Members
+- Ninoralf Dela Cruz
+- John Anthony Rebusora
+- Marju Faller
 
 ## Features
 
