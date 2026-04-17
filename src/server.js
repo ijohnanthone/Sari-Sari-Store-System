@@ -497,11 +497,19 @@ app.get("/best-selling", requireAuth, requireAdmin, (req, res) => {
 });
 
 app.get("/settings", requireAuth, (req, res) => {
+  const requestedTab = String(req.query.tab || "");
+  const isAdmin = req.session.user.role === "Admin";
+  const allowedTabs = isAdmin
+    ? new Set(["store", "profile", "notifications", "appearance", "data"])
+    : new Set(["profile", "appearance"]);
+  const activeTab = allowedTabs.has(requestedTab) ? requestedTab : (isAdmin ? "store" : "profile");
+
   res.render("settings", {
     pageTitle: "Settings",
     todayLabel: todayLabel(),
     settings: getStoreSettings(),
-    userProfile: getUserById(req.session.user.id)
+    userProfile: getUserById(req.session.user.id),
+    activeTab
   });
 });
 

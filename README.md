@@ -1,6 +1,6 @@
 # Sari-Sari Store Management System
 
-This peoject is Bootstrap-based Sari-Sari Store Management System built with Express, EJS, and SQLite for System architecture subject from University of Cebu.
+This project is a Bootstrap-based Sari-Sari Store Management System built with Express, EJS, and SQLite for a System Architecture subject from the University of Cebu.
 
 ## Members
 - Ninoralf Dela Cruz
@@ -25,21 +25,43 @@ This peoject is Bootstrap-based Sari-Sari Store Management System built with Exp
 ## Installation
 
 1. Open a terminal in the project folder.
-2. Install dependencies:
+2. Install dependencies, including the development tool `nodemon`:
 
 ```bash
 npm install
 ```
 
+## Available Scripts
+
+The project currently includes these scripts:
+
+```bash
+npm start
+npm run dev
+npm run test:smoke
+```
+
+- `npm start` starts the app normally with Node.js
+- `npm run dev` starts the app with `nodemon` and automatically restarts when you save changes
+- `npm run test:smoke` runs the smoke test script
+
 ## How To Run
 
-Start the app with:
+For normal use, start the app with:
 
 ```bash
 npm start
 ```
 
-By default, the server runs at:
+For development with auto-reload, use:
+
+```bash
+npm run dev
+```
+
+`nodemon` watches `src/server.js` and restarts the server when backend files change.
+
+By default, both commands run the app at:
 
 ```text
 http://localhost:3000
@@ -63,7 +85,7 @@ Example:
 ```bash
 $env:PORT=4000
 $env:SESSION_SECRET="your-secret"
-npm start
+npm run dev
 ```
 
 ## Database And Seed Data
@@ -100,5 +122,6 @@ data/       SQLite database file
 ## Notes
 
 - The app automatically creates the `data` folder if it does not exist.
+- `nodemon` is included as a dev dependency for local development.
 - The Settings page includes export and backup actions.
 - Resetting data from Settings restores the seeded demo content.

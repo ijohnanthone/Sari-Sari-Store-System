@@ -102,6 +102,14 @@ body[data-color-scheme="Amber"] {
 
 .app-shell { min-height: 100vh; }
 
+.app-shell > .sidebar {
+  flex: 0 0 280px;
+}
+
+.app-shell > main {
+  min-width: 0;
+}
+
 .login-shell {
   min-height: 100vh;
   background: linear-gradient(135deg, color-mix(in srgb, var(--brand-emerald) 16%, transparent), color-mix(in srgb, var(--brand-cyan) 10%, transparent)), color-mix(in srgb, var(--page-base) 92%, white 8%);
@@ -142,11 +150,26 @@ body[data-color-scheme="Amber"] {
   border-right: 1px solid var(--line-soft);
 }
 
+.sidebar .nav {
+  width: 100%;
+}
+
 .sidebar .nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
   color: var(--text-strong);
   border-radius: 0.9rem;
   font-weight: 600;
   padding: 0.9rem 1rem;
+  min-height: 3rem;
+  white-space: nowrap;
+}
+
+.sidebar .nav-link > i {
+  width: 1.25rem;
+  text-align: center;
+  flex: 0 0 1.25rem;
 }
 
 .sidebar .nav-link:hover, .sidebar .nav-link.active {
@@ -169,6 +192,17 @@ body[data-color-scheme="Amber"] {
   background: var(--surface-header);
   border-bottom: 1px solid color-mix(in srgb, var(--line-soft) 90%, transparent);
   backdrop-filter: blur(8px);
+}
+
+.header-menu-button {
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
 }
 
 .notification-dropdown { position: relative; }
@@ -426,14 +460,88 @@ body[data-color-scheme="Amber"] {
   background: var(--surface-soft);
 }
 
-.pos-cart-panel {
-  position: sticky;
-  top: 1rem;
-}
-
 .pos-cart-table-wrap {
   max-height: 26rem;
   overflow-y: auto;
+}
+
+.pos-cart-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.28);
+  backdrop-filter: blur(3px);
+  z-index: 1040;
+}
+
+.pos-cart-flyout {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 6.5rem;
+  width: min(32rem, calc(100vw - 2rem));
+  max-height: min(80vh, 46rem);
+  overflow: hidden;
+  border-radius: 1.5rem;
+  box-shadow: 0 1.25rem 3rem rgba(15, 23, 42, 0.18);
+  transform: translateY(1rem) scale(0.96);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 1050;
+}
+
+.pos-cart-flyout.is-open {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pos-cart-close {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.pos-cart-fab {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  width: 4.25rem;
+  height: 4.25rem;
+  padding: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  box-shadow: 0 1rem 2.5rem rgba(22, 163, 74, 0.34);
+  z-index: 1060;
+}
+
+.pos-cart-fab:hover,
+.pos-cart-fab:focus-visible {
+  transform: translateY(-2px);
+}
+
+.pos-cart-fab-count {
+  position: absolute;
+  top: 0.15rem;
+  right: 0.15rem;
+  min-width: 1.45rem;
+  height: 1.45rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--brand-strong);
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0.35rem 0.8rem rgba(15, 23, 42, 0.12);
 }
 
 .offcanvas {
@@ -465,5 +573,39 @@ body[data-color-scheme="Amber"] {
 .progress-soft .progress-bar { border-radius: 999px; }
 
 @media (max-width: 991.98px) {
-  .sidebar { width: 100%; }
+  .app-shell > .sidebar {
+    flex: 0 0 auto;
+  }
+
+  .sidebar {
+    width: min(20rem, calc(100vw - 1.25rem));
+    max-width: calc(100vw - 1.25rem);
+    border-right: 0;
+    border-left: 1px solid var(--line-soft);
+    box-shadow: var(--shadow-card);
+  }
+
+  .sidebar.offcanvas-lg {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--brand-emerald) 16%, transparent), color-mix(in srgb, var(--surface-sidebar) 96%, transparent) 10rem), var(--surface-sidebar);
+  }
+
+  .sidebar.offcanvas-lg .offcanvas-header {
+    border-bottom: 0;
+  }
+
+  .sidebar.offcanvas-lg .offcanvas-body {
+    padding-top: 1rem;
+  }
+
+  .pos-cart-flyout {
+    right: 1rem;
+    bottom: 5.75rem;
+    width: calc(100vw - 2rem);
+    max-height: 78vh;
+  }
+
+  .pos-cart-fab {
+    right: 1rem;
+    bottom: 1rem;
+  }
 }

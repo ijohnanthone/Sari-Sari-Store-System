@@ -7,20 +7,20 @@
       <%- include("partials/flash") %>
       <ul class="nav nav-pills gap-2 mb-4" role="tablist">
         <% if (user && user.role === "Admin") { %>
-          <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#store-tab" type="button">Store Info</button></li>
+          <li class="nav-item"><button class="nav-link <%= activeTab === 'store' ? 'active' : '' %>" data-bs-toggle="tab" data-bs-target="#store-tab" type="button">Store Info</button></li>
         <% } %>
-        <li class="nav-item"><button class="nav-link <%= user && user.role !== 'Admin' ? 'active' : '' %>" data-bs-toggle="tab" data-bs-target="#profile-tab" type="button">Profile</button></li>
+        <li class="nav-item"><button class="nav-link <%= activeTab === 'profile' ? 'active' : '' %>" data-bs-toggle="tab" data-bs-target="#profile-tab" type="button">Profile</button></li>
         <% if (user && user.role === "Admin") { %>
-          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#notifications-tab" type="button">Notifications</button></li>
+          <li class="nav-item"><button class="nav-link <%= activeTab === 'notifications' ? 'active' : '' %>" data-bs-toggle="tab" data-bs-target="#notifications-tab" type="button">Notifications</button></li>
         <% } %>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#appearance-tab" type="button">Appearance</button></li>
+        <li class="nav-item"><button class="nav-link <%= activeTab === 'appearance' ? 'active' : '' %>" data-bs-toggle="tab" data-bs-target="#appearance-tab" type="button">Appearance</button></li>
         <% if (user && user.role === "Admin") { %>
-          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#data-tab" type="button">Data</button></li>
+          <li class="nav-item"><button class="nav-link <%= activeTab === 'data' ? 'active' : '' %>" data-bs-toggle="tab" data-bs-target="#data-tab" type="button">Data</button></li>
         <% } %>
       </ul>
       <div class="tab-content">
         <% if (user && user.role === "Admin") { %>
-        <div class="tab-pane fade show active" id="store-tab">
+        <div class="tab-pane fade <%= activeTab === 'store' ? 'show active' : '' %>" id="store-tab">
           <div class="content-card p-4">
             <div class="section-title mb-3">Store Information</div>
             <form action="/settings/store" method="post" class="row g-3">
@@ -35,7 +35,7 @@
           </div>
         </div>
         <% } %>
-        <div class="tab-pane fade <%= user && user.role !== 'Admin' ? 'show active' : '' %>" id="profile-tab">
+        <div class="tab-pane fade <%= activeTab === 'profile' ? 'show active' : '' %>" id="profile-tab">
           <div class="content-card p-4 mb-4">
             <div class="section-title mb-3">User Profile</div>
             <form action="/settings/profile" method="post" class="row g-3">
@@ -70,7 +70,7 @@
           <% } %>
         </div>
         <% if (user && user.role === "Admin") { %>
-        <div class="tab-pane fade" id="notifications-tab">
+        <div class="tab-pane fade <%= activeTab === 'notifications' ? 'show active' : '' %>" id="notifications-tab">
           <div class="content-card p-4">
             <div class="section-title mb-3">Notification Preferences</div>
             <form action="/settings/notifications" method="post" class="vstack gap-3">
@@ -84,7 +84,7 @@
           </div>
         </div>
         <% } %>
-        <div class="tab-pane fade" id="appearance-tab">
+        <div class="tab-pane fade <%= activeTab === 'appearance' ? 'show active' : '' %>" id="appearance-tab">
           <div class="content-card p-4">
             <div class="section-title mb-3">Appearance Settings</div>
             <form action="/settings/appearance" method="post" class="row g-3">
@@ -97,7 +97,7 @@
           </div>
         </div>
         <% if (user && user.role === "Admin") { %>
-        <div class="tab-pane fade" id="data-tab">
+        <div class="tab-pane fade <%= activeTab === 'data' ? 'show active' : '' %>" id="data-tab">
           <div class="content-card p-4">
             <div class="section-title mb-3">Data Management</div>
             <div class="row g-3">

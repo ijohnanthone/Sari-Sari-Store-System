@@ -1,20 +1,15 @@
 <header class="header-card px-3 px-lg-4 py-3">
   <div class="d-flex flex-wrap gap-3 justify-content-between align-items-center">
-    <div>
-      <h2 class="h3 mb-1"><%= pageTitle %></h2>
+    <div class="flex-grow-1">
+      <div class="d-flex align-items-start justify-content-between gap-3">
+        <h2 class="h3 mb-1"><%= pageTitle %></h2>
+        <button class="btn btn-outline-secondary header-menu-button d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar" aria-controls="mobileSidebar" aria-label="Open navigation menu">
+          <i class="bi bi-list fs-4"></i>
+        </button>
+      </div>
       <div class="mini-note"><%= todayLabel %></div>
     </div>
     <div class="d-flex flex-wrap align-items-center gap-3">
-      <form class="d-flex" method="get" action="/inventory">
-        <% if (quickSearchStatus !== "all") { %>
-          <input type="hidden" name="status" value="<%= quickSearchStatus %>">
-        <% } %>
-        <div class="input-group" style="max-width: 320px;">
-          <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-          <input class="form-control" name="search" value="<%= quickSearch %>" placeholder="Quick inventory search">
-          <button class="btn btn-outline-secondary" type="submit">Search</button>
-        </div>
-      </form>
       <div class="d-flex align-items-center gap-3">
         <div class="dropdown notification-dropdown">
           <button class="btn notification-button position-relative text-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Open notifications">
@@ -83,6 +78,10 @@
     </div>
   </div>
 </header>
+<button class="btn btn-success pos-cart-fab" type="button" id="globalCartToggleButton" aria-label="Open current cart">
+  <i class="bi bi-cart3"></i>
+  <span class="pos-cart-fab-count" id="globalCartFabCount">0</span>
+</button>
 <script>
   window.addEventListener("load", () => {
     document.querySelectorAll(".notification-dropdown").forEach((dropdownElement) => {
@@ -100,6 +99,42 @@
       dropdownElement.addEventListener("mouseleave", () => {
         hideTimer = window.setTimeout(() => dropdown.hide(), 140);
       });
+    });
+
+    const globalCartToggleButton = document.getElementById("globalCartToggleButton");
+    const globalCartFabCount = document.getElementById("globalCartFabCount");
+    const salesCartStorageKey = "sales-cart-state";
+    const salesCartOpenStorageKey = "sales-cart-open-on-load";
+    const currentPath = window.location.pathname;
+
+    function readCartCount() {
+      try {
+        const raw = window.localStorage.getItem(salesCartStorageKey);
+        if (!raw) return 0;
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return 0;
+        return parsed.reduce((total, item) => total + Math.max(0, Number(item.quantity) || 0), 0);
+      } catch (error) {
+        return 0;
+      }
+    }
+
+    function syncCartBadge() {
+      globalCartFabCount.textContent = String(readCartCount());
+    }
+
+    syncCartBadge();
+    window.addEventListener("storage", syncCartBadge);
+    window.addEventListener("sales-cart-updated", syncCartBadge);
+
+    globalCartToggleButton.addEventListener("click", () => {
+      if (currentPath.startsWith("/sales")) {
+        window.dispatchEvent(new CustomEvent("sales-cart-toggle-request"));
+        return;
+      }
+
+      window.localStorage.setItem(salesCartOpenStorageKey, "true");
+      window.location.href = "/sales?cart=open";
     });
   });
 </script>
