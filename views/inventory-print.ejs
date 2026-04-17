@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventory Print List</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; color: #1f2937; }
+    h1 { margin-bottom: 4px; }
+    .meta { color: #6b7280; margin-bottom: 16px; }
+    .filters { margin-bottom: 18px; font-size: 14px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #d1d5db; padding: 10px; font-size: 14px; text-align: left; }
+    th { background: #f3f4f6; }
+    .text-end { text-align: right; }
+    @media print {
+      body { margin: 12px; }
+    }
+  </style>
+</head>
+<body onload="window.print()">
+  <h1>Inventory List</h1>
+  <div class="meta"><%= todayLabel %></div>
+  <div class="filters">
+    <strong>Status:</strong> <%= status === "all" ? "All statuses" : status %>
+    <strong style="margin-left: 16px;">Search:</strong> <%= search || "All items" %>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Item Name</th>
+        <th>Category</th>
+        <th>Status</th>
+        
+        <th class="text-end">Unit Price</th>
+        <th class="text-end">Selling Price</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (items.length) { %>
+        <% items.forEach((item) => { %>
+          <tr>
+            <td><%= item.name %></td>
+            <td><%= item.category %></td>
+            <td><%= item.status %></td>
+            
+            <td class="text-end"><%= formatCurrency(item.unit_price) %></td>
+            <td class="text-end"><%= formatCurrency(item.selling_price) %></td>
+          </tr>
+        <% }) %>
+      <% } else { %>
+        <tr>
+          <td colspan="6">No inventory items matched the selected filters.</td>
+        </tr>
+      <% } %>
+    </tbody>
+  </table>
+</body>
+</html>

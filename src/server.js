@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   addInventoryItem,
+  createUserAccount,
   createSale,
   deleteInventoryItem,
   exportInventoryCsv,
@@ -20,15 +21,19 @@ import {
   getUserById,
   getUserByUsername,
   initializeDatabase,
+  listUsers,
   listInventory,
   listSales,
   resetAllData,
+  updateUserAccount,
+  updateUserPin,
   updateAppearance,
   updateInventoryItem,
   updateNotifications,
   updatePassword,
   updateStoreSettings,
   updateUserProfile,
+  verifyPin,
   verifyPassword,
   getInventorySummary
 } from "./db.js";
@@ -220,6 +225,23 @@ function requireApiAuth(req, res, next) {
   return next();
 }
 
+function requireAdmin(req, res, next) {
+  const currentUser = getUserById(req.session.user.id);
+  if (!currentUser || currentUser.role !== "Admin") {
+    setFlash(req, "danger", "You do not have access to that page.");
+    return res.redirect("/");
+  }
+  return next();
+}
+
+function requireAdminApi(req, res, next) {
+  const currentUser = getUserById(req.session.user.id);
+  if (!currentUser || currentUser.role !== "Admin") {
+    return res.status(403).json({ error: "Admin access required." });
+  }
+  return next();
+}
+
 function formatCurrency(value) {
   return Number(value || 0).toLocaleString("en-PH", { style: "currency", currency: "PHP" });
 }
@@ -250,15 +272,21 @@ function normalizeInventoryStatus(value) {
   if (normalized === "in stock" || normalized === "in-stock") return "In Stock";
   if (normalized === "low stock" || normalized === "low-stock") return "Low Stock";
   if (normalized === "out of stock" || normalized === "out-of-stock") return "Out of Stock";
+  if (normalized === "low/out of stock" || normalized === "low-out-of-stock" || normalized === "low / out of stock") return "Low/Out of Stock";
   return "all";
 }
 
+function normalizeRole(value) {
+  return String(value || "").trim().toLowerCase() === "user" ? "User" : "Admin";
+}
+
+function isFourDigitPin(value) {
+  return /^\d{4}$/.test(String(value || "").trim());
+}
+
 app.get("/", requireAuth, (req, res) => {
-  const chartRange = ["daily", "weekly", "monthly", "yearly"].includes(String(req.query.range || "").toLowerCase())
-    ? String(req.query.range).toLowerCase()
-    : "daily";
   const dashboard = getDashboardData();
-  const chartData = getDashboardChartData(chartRange);
+  const chartData = getDashboardChartData();
   res.render("dashboard", {
     pageTitle: "Dashboard",
     todayLabel: todayLabel(),
@@ -266,19 +294,15 @@ app.get("/", requireAuth, (req, res) => {
     metrics: dashboard.metrics,
     lowStockItems: dashboard.lowStockItems,
     bestSellingItem: dashboard.bestSellingItem,
-    chartRange,
     chartTitle: chartData.title,
     chartLabels: chartData.labels,
-    chartValues: chartData.values,
+    chartDatasets: chartData.datasets,
     formatCurrency
   });
 });
 
 app.get("/api/dashboard/chart", requireApiAuth, (req, res) => {
-  const range = ["daily", "weekly", "monthly", "yearly"].includes(String(req.query.range || "").toLowerCase())
-    ? String(req.query.range).toLowerCase()
-    : "daily";
-  return res.json(getDashboardChartData(range));
+  return res.json(getDashboardChartData());
 });
 
 app.get("/api/dashboard/overview", requireApiAuth, (req, res) => {
@@ -303,7 +327,7 @@ app.get("/api/inventory", requireApiAuth, (req, res) => {
   });
 });
 
-app.get("/api/sales", requireApiAuth, (req, res) => {
+app.get("/api/sales", requireApiAuth, requireAdminApi, (req, res) => {
   const filter = normalizeSalesFilter(req.query.filter);
   const sales = listSales(filter);
   return res.json({
@@ -313,15 +337,15 @@ app.get("/api/sales", requireApiAuth, (req, res) => {
   });
 });
 
-app.get("/api/sales/recommendations", requireApiAuth, (req, res) => {
+app.get("/api/sales/recommendations", requireApiAuth, requireAdminApi, (req, res) => {
   return res.json(getQuickSaleRecommendations());
 });
 
-app.get("/api/sales/metrics", requireApiAuth, (req, res) => {
+app.get("/api/sales/metrics", requireApiAuth, requireAdminApi, (req, res) => {
   return res.json(getSalesMetrics());
 });
 
-app.post("/api/sales", requireApiAuth, (req, res) => {
+app.post("/api/sales", requireApiAuth, requireAdminApi, (req, res) => {
   try {
     const items = Array.isArray(req.body.items) ? req.body.items : [];
     const normalizedItems = items.map((item) => ({
@@ -397,7 +421,7 @@ app.get("/inventory", requireAuth, (req, res) => {
   });
 });
 
-app.post("/inventory/add", requireAuth, (req, res) => {
+app.post("/inventory/add", requireAuth, requireAdmin, (req, res) => {
   try {
     addInventoryItem(req.body);
     setFlash(req, "success", "Inventory item added.");
@@ -407,7 +431,7 @@ app.post("/inventory/add", requireAuth, (req, res) => {
   res.redirect("/inventory");
 });
 
-app.post("/inventory/:id/update", requireAuth, (req, res) => {
+app.post("/inventory/:id/update", requireAuth, requireAdmin, (req, res) => {
   try {
     updateInventoryItem(Number(req.params.id), req.body);
     setFlash(req, "success", "Inventory item updated.");
@@ -417,7 +441,7 @@ app.post("/inventory/:id/update", requireAuth, (req, res) => {
   res.redirect("/inventory");
 });
 
-app.post("/inventory/:id/delete", requireAuth, (req, res) => {
+app.post("/inventory/:id/delete", requireAuth, requireAdmin, (req, res) => {
   try {
     deleteInventoryItem(Number(req.params.id));
     setFlash(req, "success", "Inventory item deleted.");
@@ -427,7 +451,7 @@ app.post("/inventory/:id/delete", requireAuth, (req, res) => {
   res.redirect("/inventory");
 });
 
-app.get("/sales", requireAuth, (req, res) => {
+app.get("/sales", requireAuth, requireAdmin, (req, res) => {
   const filter = req.query.filter || "all";
   res.render("sales", {
     pageTitle: "Sales",
@@ -443,7 +467,7 @@ app.get("/sales", requireAuth, (req, res) => {
   });
 });
 
-app.post("/sales/add", requireAuth, (req, res) => {
+app.post("/sales/add", requireAuth, requireAdmin, (req, res) => {
   try {
     const ids = Array.isArray(req.body.itemId) ? req.body.itemId : [req.body.itemId];
     const quantities = Array.isArray(req.body.quantity) ? req.body.quantity : [req.body.quantity];
@@ -464,11 +488,11 @@ app.post("/sales/add", requireAuth, (req, res) => {
   res.redirect("/sales");
 });
 
-app.get("/reports", requireAuth, (req, res) => {
+app.get("/reports", requireAuth, requireAdmin, (req, res) => {
   res.render("reports", { pageTitle: "Reports", todayLabel: todayLabel(), reports: getReportsData(), formatCurrency });
 });
 
-app.get("/best-selling", requireAuth, (req, res) => {
+app.get("/best-selling", requireAuth, requireAdmin, (req, res) => {
   res.render("best-selling", { pageTitle: "Best Selling", todayLabel: todayLabel(), bestSelling: getBestSellingData(), formatCurrency });
 });
 
@@ -481,7 +505,28 @@ app.get("/settings", requireAuth, (req, res) => {
   });
 });
 
-app.post("/settings/store", requireAuth, (req, res) => {
+app.get("/inventory/print", requireAuth, (req, res) => {
+  const search = String(req.query.search || "");
+  const status = normalizeInventoryStatus(req.query.status);
+  res.render("inventory-print", {
+    pageTitle: "Print Inventory List",
+    todayLabel: todayLabel(),
+    items: listInventory(search, status),
+    search,
+    status,
+    formatCurrency
+  });
+});
+
+app.get("/users", requireAuth, requireAdmin, (req, res) => {
+  res.render("users", {
+    pageTitle: "User Accounts",
+    todayLabel: todayLabel(),
+    users: listUsers()
+  });
+});
+
+app.post("/settings/store", requireAuth, requireAdmin, (req, res) => {
   updateStoreSettings(req.body);
   setFlash(req, "success", "Store settings saved.");
   res.redirect("/settings");
@@ -491,6 +536,102 @@ app.post("/settings/profile", requireAuth, (req, res) => {
   updateUserProfile(req.session.user.id, req.body);
   setFlash(req, "success", "Profile updated.");
   res.redirect("/settings");
+});
+
+app.post("/users/add", requireAuth, requireAdmin, (req, res) => {
+  const currentUser = getUserById(req.session.user.id);
+  const username = String(req.body.username || "").trim();
+  const fullName = String(req.body.fullName || "").trim();
+  const email = String(req.body.email || "").trim();
+  const phone = String(req.body.phone || "").trim();
+  const password = String(req.body.password || "");
+  const pin = String(req.body.pin || "").trim();
+  const securityPin = String(req.body.securityPin || "").trim();
+
+  if (!username || !fullName || !email || !phone || !password || !pin) {
+    setFlash(req, "danger", "All account fields are required.");
+    return res.redirect("/users");
+  }
+
+  if (normalizeRole(req.body.role) === "Admin" && !isFourDigitPin(pin)) {
+    setFlash(req, "danger", "New user PIN must be exactly 4 digits.");
+    return res.redirect("/users");
+  }
+
+  if (!isFourDigitPin(securityPin) || !verifyPin(securityPin, currentUser.pin_hash)) {
+    setFlash(req, "danger", "Security PIN is incorrect.");
+    return res.redirect("/users");
+  }
+
+  try {
+    createUserAccount({
+      username,
+      fullName,
+      role: normalizeRole(req.body.role),
+      email,
+      phone,
+      password,
+      pin
+    });
+    setFlash(req, "success", "User account created.");
+  } catch (error) {
+    setFlash(req, "danger", error.message);
+  }
+  return res.redirect("/users");
+});
+
+app.post("/users/:id/update", requireAuth, requireAdmin, (req, res) => {
+  const currentUser = getUserById(req.session.user.id);
+  const targetUserId = Number(req.params.id);
+  const targetUser = getUserById(targetUserId);
+  const username = String(req.body.username || "").trim();
+  const fullName = String(req.body.fullName || "").trim();
+  const email = String(req.body.email || "").trim();
+  const phone = String(req.body.phone || "").trim();
+  const password = String(req.body.password || "");
+  const pin = String(req.body.pin || "").trim();
+  const securityPin = String(req.body.securityPin || "").trim();
+
+  if (!targetUser) {
+    setFlash(req, "danger", "User account not found.");
+    return res.redirect("/users");
+  }
+
+  if (!username || !fullName || !email || !phone) {
+    setFlash(req, "danger", "Username, full name, email, and contact number are required.");
+    return res.redirect("/users");
+  }
+
+  if (normalizeRole(req.body.role) === "Admin" && pin && !isFourDigitPin(pin)) {
+    setFlash(req, "danger", "Updated PIN must be exactly 4 digits.");
+    return res.redirect("/users");
+  }
+
+  if (normalizeRole(req.body.role) === "Admin" && !targetUser.pin_hash && !pin) {
+    setFlash(req, "danger", "Admin accounts must have a 4-digit PIN.");
+    return res.redirect("/users");
+  }
+
+  if (!isFourDigitPin(securityPin) || !verifyPin(securityPin, currentUser.pin_hash)) {
+    setFlash(req, "danger", "Security PIN is incorrect.");
+    return res.redirect("/users");
+  }
+
+  try {
+    updateUserAccount(targetUserId, {
+      username,
+      fullName,
+      role: normalizeRole(req.body.role),
+      email,
+      phone,
+      password,
+      pin
+    });
+    setFlash(req, "success", targetUserId === currentUser.id ? "Your account was updated." : "User account updated.");
+  } catch (error) {
+    setFlash(req, "danger", error.message);
+  }
+  return res.redirect("/users");
 });
 
 app.post("/settings/password", requireAuth, (req, res) => {
@@ -508,7 +649,26 @@ app.post("/settings/password", requireAuth, (req, res) => {
   return res.redirect("/settings");
 });
 
-app.post("/settings/notifications", requireAuth, (req, res) => {
+app.post("/settings/pin", requireAuth, (req, res) => {
+  const user = getUserById(req.session.user.id);
+  if (user.role !== "Admin") {
+    setFlash(req, "danger", "Only admin accounts can use a security PIN.");
+    return res.redirect("/settings");
+  }
+  if (!verifyPin(req.body.currentPin, user.pin_hash)) {
+    setFlash(req, "danger", "Current PIN is incorrect.");
+    return res.redirect("/settings");
+  }
+  if (!isFourDigitPin(req.body.newPin) || req.body.newPin !== req.body.confirmPin) {
+    setFlash(req, "danger", "New PINs must match and contain exactly 4 digits.");
+    return res.redirect("/settings");
+  }
+  updateUserPin(user.id, req.body.newPin);
+  setFlash(req, "success", "Security PIN changed successfully.");
+  return res.redirect("/settings");
+});
+
+app.post("/settings/notifications", requireAuth, requireAdmin, (req, res) => {
   updateNotifications({
     lowStockAlert: Boolean(req.body.lowStockAlert),
     outOfStockAlert: Boolean(req.body.outOfStockAlert),
@@ -528,23 +688,23 @@ app.post("/settings/appearance", requireAuth, (req, res) => {
   res.redirect("/settings");
 });
 
-app.get("/settings/export/inventory.csv", requireAuth, (req, res) => {
+app.get("/settings/export/inventory.csv", requireAuth, requireAdmin, (req, res) => {
   res.setHeader("Content-Type", "text/csv");
   res.setHeader("Content-Disposition", 'attachment; filename="inventory.csv"');
   res.send(exportInventoryCsv());
 });
 
-app.get("/settings/export/sales.csv", requireAuth, (req, res) => {
+app.get("/settings/export/sales.csv", requireAuth, requireAdmin, (req, res) => {
   res.setHeader("Content-Type", "text/csv");
   res.setHeader("Content-Disposition", 'attachment; filename="sales.csv"');
   res.send(exportSalesCsv());
 });
 
-app.get("/settings/backup", requireAuth, (req, res) => {
+app.get("/settings/backup", requireAuth, requireAdmin, (req, res) => {
   res.download(getDatabasePath(), "store-backup.db");
 });
 
-app.post("/settings/reset", requireAuth, (req, res) => {
+app.post("/settings/reset", requireAuth, requireAdmin, (req, res) => {
   resetAllData();
   setFlash(req, "warning", "All data reset to the seeded Figma sample content.");
   res.redirect("/settings");

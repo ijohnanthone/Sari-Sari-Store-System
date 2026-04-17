@@ -6,13 +6,20 @@
     <section class="p-3 p-lg-4">
       <%- include("partials/flash") %>
       <ul class="nav nav-pills gap-2 mb-4" role="tablist">
-        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#store-tab" type="button">Store Info</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#profile-tab" type="button">Profile</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#notifications-tab" type="button">Notifications</button></li>
+        <% if (user && user.role === "Admin") { %>
+          <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#store-tab" type="button">Store Info</button></li>
+        <% } %>
+        <li class="nav-item"><button class="nav-link <%= user && user.role !== 'Admin' ? 'active' : '' %>" data-bs-toggle="tab" data-bs-target="#profile-tab" type="button">Profile</button></li>
+        <% if (user && user.role === "Admin") { %>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#notifications-tab" type="button">Notifications</button></li>
+        <% } %>
         <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#appearance-tab" type="button">Appearance</button></li>
-        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#data-tab" type="button">Data</button></li>
+        <% if (user && user.role === "Admin") { %>
+          <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#data-tab" type="button">Data</button></li>
+        <% } %>
       </ul>
       <div class="tab-content">
+        <% if (user && user.role === "Admin") { %>
         <div class="tab-pane fade show active" id="store-tab">
           <div class="content-card p-4">
             <div class="section-title mb-3">Store Information</div>
@@ -27,7 +34,8 @@
             </form>
           </div>
         </div>
-        <div class="tab-pane fade" id="profile-tab">
+        <% } %>
+        <div class="tab-pane fade <%= user && user.role !== 'Admin' ? 'show active' : '' %>" id="profile-tab">
           <div class="content-card p-4 mb-4">
             <div class="section-title mb-3">User Profile</div>
             <form action="/settings/profile" method="post" class="row g-3">
@@ -48,7 +56,20 @@
               <div class="col-12"><button class="btn btn-success">Change Password</button></div>
             </form>
           </div>
+          <% if (user && user.role === "Admin") { %>
+            <div class="content-card p-4 mt-4">
+              <div class="section-title mb-3">Change Security PIN</div>
+              <form action="/settings/pin" method="post" class="row g-3">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <div class="col-md-4"><label class="form-label">Current PIN</label><input class="form-control" type="password" name="currentPin" pattern="\d{4}" inputmode="numeric" maxlength="4" required></div>
+                <div class="col-md-4"><label class="form-label">New PIN</label><input class="form-control" type="password" name="newPin" pattern="\d{4}" inputmode="numeric" maxlength="4" required></div>
+                <div class="col-md-4"><label class="form-label">Confirm PIN</label><input class="form-control" type="password" name="confirmPin" pattern="\d{4}" inputmode="numeric" maxlength="4" required></div>
+                <div class="col-12"><button class="btn btn-success">Change PIN</button></div>
+              </form>
+            </div>
+          <% } %>
         </div>
+        <% if (user && user.role === "Admin") { %>
         <div class="tab-pane fade" id="notifications-tab">
           <div class="content-card p-4">
             <div class="section-title mb-3">Notification Preferences</div>
@@ -62,6 +83,7 @@
             </form>
           </div>
         </div>
+        <% } %>
         <div class="tab-pane fade" id="appearance-tab">
           <div class="content-card p-4">
             <div class="section-title mb-3">Appearance Settings</div>
@@ -74,6 +96,7 @@
             </form>
           </div>
         </div>
+        <% if (user && user.role === "Admin") { %>
         <div class="tab-pane fade" id="data-tab">
           <div class="content-card p-4">
             <div class="section-title mb-3">Data Management</div>
@@ -84,6 +107,7 @@
             </div>
           </div>
         </div>
+        <% } %>
       </div>
     </section>
   </main>

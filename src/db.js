@@ -67,10 +67,32 @@ export function verifyPassword(password, stored) {
   return crypto.timingSafeEqual(Buffer.from(originalHash, "hex"), Buffer.from(computedHash, "hex"));
 }
 
+export function hashPin(pin) {
+  return hashPassword(pin);
+}
+
+export function verifyPin(pin, stored) {
+  return verifyPassword(pin, stored);
+}
+
 export function computeStatus(stockQuantity, reorderLevel) {
   if (stockQuantity <= 0) return "Out of Stock";
   if (stockQuantity <= reorderLevel) return "Low Stock";
   return "In Stock";
+}
+
+function normalizeItemStatus(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "low stock" || normalized === "low-stock") return "Low Stock";
+  if (normalized === "out of stock" || normalized === "out-of-stock") return "Out of Stock";
+  return "In Stock";
+}
+
+function deriveStockValues(status) {
+  const normalizedStatus = normalizeItemStatus(status);
+  if (normalizedStatus === "Out of Stock") return { stockQuantity: 0, reorderLevel: 10 };
+  if (normalizedStatus === "Low Stock") return { stockQuantity: 5, reorderLevel: 10 };
+  return { stockQuantity: 20, reorderLevel: 10 };
 }
 
 function createSchema() {
@@ -83,12 +105,14 @@ function createSchema() {
       role TEXT NOT NULL DEFAULT 'Admin',
       email TEXT NOT NULL,
       phone TEXT NOT NULL,
-      password_hash TEXT NOT NULL
+      password_hash TEXT NOT NULL,
+      pin_hash TEXT NOT NULL DEFAULT ''
     );
     CREATE TABLE IF NOT EXISTS inventory_items (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       category TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'In Stock',
       stock_quantity INTEGER NOT NULL DEFAULT 0,
       unit_price REAL NOT NULL DEFAULT 0,
       selling_price REAL NOT NULL DEFAULT 0,
@@ -131,6 +155,29 @@ function createSchema() {
   `);
 }
 
+function ensureUserSchema() {
+  const columns = db.prepare("PRAGMA table_info(users)").all();
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (!columnNames.has("pin_hash")) {
+    db.exec("ALTER TABLE users ADD COLUMN pin_hash TEXT NOT NULL DEFAULT ''");
+  }
+}
+
+function ensureInventorySchema() {
+  const columns = db.prepare("PRAGMA table_info(inventory_items)").all();
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (!columnNames.has("status")) {
+    db.exec("ALTER TABLE inventory_items ADD COLUMN status TEXT NOT NULL DEFAULT 'In Stock'");
+    const existingItems = db.prepare("SELECT id, stock_quantity, reorder_level FROM inventory_items").all();
+    const updateStatus = db.prepare("UPDATE inventory_items SET status = ? WHERE id = ?");
+    for (const item of existingItems) {
+      updateStatus.run(computeStatus(item.stock_quantity, item.reorder_level), item.id);
+    }
+  }
+}
+
 export function createSale({ saleDate, paymentMethod, items, skipStockValidation = false }) {
   const insertSale = db.prepare(`INSERT INTO sales (transaction_code, sale_date, payment_method, total_amount) VALUES (?, ?, ?, ?)`);
   const insertSaleItem = db.prepare(`INSERT INTO sale_items (sale_id, inventory_item_id, item_name, quantity, price, total) VALUES (?, ?, ?, ?, ?, ?)`);
@@ -159,8 +206,14 @@ export function createSale({ saleDate, paymentMethod, items, skipStockValidation
 
 function seedDefaults() {
   if (!db.prepare("SELECT COUNT(*) AS count FROM users").get().count) {
-    db.prepare(`INSERT INTO users (username, full_name, role, email, phone, password_hash) VALUES (?, ?, ?, ?, ?, ?)`)
-      .run("admin", "Store Owner", "Admin", "owner@sarisaristore.com", "+63 912 345 6789", hashPassword("admin123"));
+    db.prepare(`INSERT INTO users (username, full_name, role, email, phone, password_hash, pin_hash) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run("admin", "Store Owner", "Admin", "owner@sarisaristore.com", "+63 912 345 6789", hashPassword("admin123"), hashPin("1234"));
+  }
+
+  const usersMissingPin = db.prepare("SELECT id FROM users WHERE pin_hash = '' OR pin_hash IS NULL").all();
+  const assignDefaultPin = db.prepare("UPDATE users SET pin_hash = ? WHERE id = ?");
+  for (const user of usersMissingPin) {
+    assignDefaultPin.run(hashPin("1234"), user.id);
   }
 
   if (!db.prepare("SELECT COUNT(*) AS count FROM store_settings").get().count) {
@@ -194,6 +247,8 @@ function seedDefaults() {
 
 export function initializeDatabase() {
   createSchema();
+  ensureUserSchema();
+  ensureInventorySchema();
   seedDefaults();
 }
 
@@ -203,6 +258,10 @@ export function getUserByUsername(username) {
 
 export function getUserById(id) {
   return db.prepare("SELECT * FROM users WHERE id = ?").get(id);
+}
+
+export function listUsers() {
+  return db.prepare("SELECT id, username, full_name, role, email, phone FROM users ORDER BY full_name, username").all();
 }
 
 export function getStoreSettings() {
@@ -216,6 +275,43 @@ export function updateStoreSettings(input) {
 
 export function updateUserProfile(userId, input) {
   db.prepare(`UPDATE users SET full_name = ?, email = ?, phone = ? WHERE id = ?`).run(input.fullName, input.email, input.phone, userId);
+}
+
+export function createUserAccount(input) {
+  db.prepare(`
+    INSERT INTO users (username, full_name, role, email, phone, password_hash, pin_hash)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    input.username,
+    input.fullName,
+    input.role,
+    input.email,
+    input.phone,
+    hashPassword(input.password),
+    input.role === "Admin" ? hashPin(input.pin) : ""
+  );
+}
+
+export function updateUserAccount(userId, input) {
+  db.prepare(`
+    UPDATE users
+    SET username = ?, full_name = ?, role = ?, email = ?, phone = ?
+    WHERE id = ?
+  `).run(input.username, input.fullName, input.role, input.email, input.phone, userId);
+
+  if (input.password) {
+    updatePassword(userId, input.password);
+  }
+
+  if (input.role === "User") {
+    db.prepare("UPDATE users SET pin_hash = '' WHERE id = ?").run(userId);
+  } else if (input.pin) {
+    db.prepare("UPDATE users SET pin_hash = ? WHERE id = ?").run(hashPin(input.pin), userId);
+  }
+}
+
+export function updateUserPin(userId, newPin) {
+  db.prepare("UPDATE users SET pin_hash = ? WHERE id = ?").run(hashPin(newPin), userId);
 }
 
 export function updatePassword(userId, newPassword) {
@@ -240,11 +336,14 @@ export function listInventory(search = "", status = "all") {
     ORDER BY name
   `).all(pattern, pattern).map((row) => ({
     ...row,
-    status: computeStatus(row.stock_quantity, row.reorder_level),
+    status: normalizeItemStatus(row.status),
     profit: row.selling_price - row.unit_price
   }));
 
   if (status === "all") return items;
+  if (status === "Low/Out of Stock") {
+    return items.filter((item) => item.status === "Low Stock" || item.status === "Out of Stock");
+  }
   return items.filter((item) => item.status === status);
 }
 
@@ -259,13 +358,15 @@ export function getInventorySummary() {
 }
 
 export function addInventoryItem(input) {
-  db.prepare(`INSERT INTO inventory_items (name, category, stock_quantity, unit_price, selling_price, reorder_level) VALUES (?, ?, ?, ?, ?, ?)`)
-    .run(input.name, input.category, Number(input.stockQuantity), Number(input.unitPrice), Number(input.sellingPrice), Number(input.reorderLevel));
+  const stockValues = deriveStockValues(input.status);
+  db.prepare(`INSERT INTO inventory_items (name, category, status, stock_quantity, unit_price, selling_price, reorder_level) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+    .run(input.name, input.category, normalizeItemStatus(input.status), stockValues.stockQuantity, Number(input.unitPrice), Number(input.sellingPrice), stockValues.reorderLevel);
 }
 
 export function updateInventoryItem(id, input) {
-  db.prepare(`UPDATE inventory_items SET name = ?, category = ?, stock_quantity = ?, unit_price = ?, selling_price = ?, reorder_level = ? WHERE id = ?`)
-    .run(input.name, input.category, Number(input.stockQuantity), Number(input.unitPrice), Number(input.sellingPrice), Number(input.reorderLevel), id);
+  const stockValues = deriveStockValues(input.status);
+  db.prepare(`UPDATE inventory_items SET name = ?, category = ?, status = ?, stock_quantity = ?, unit_price = ?, selling_price = ?, reorder_level = ? WHERE id = ?`)
+    .run(input.name, input.category, normalizeItemStatus(input.status), stockValues.stockQuantity, Number(input.unitPrice), Number(input.sellingPrice), stockValues.reorderLevel, id);
 }
 
 export function deleteInventoryItem(id) {
@@ -385,97 +486,62 @@ export function getDashboardData() {
 }
 
 export function getDashboardChartData(range = "daily") {
-  const normalizedRange = ["daily", "weekly", "monthly", "yearly"].includes(range) ? range : "daily";
-  const rows = listSales("all");
-  const totals = new Map();
+  const today = getTodayDate();
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const nextMonthStart = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+  const numberOfDays = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const labels = Array.from({ length: numberOfDays }, (_, index) => String(index + 1));
+  const gcashValues = Array(numberOfDays).fill(0);
+  const loadValues = Array(numberOfDays).fill(0);
+  const productValues = Array(numberOfDays).fill(0);
 
-  if (normalizedRange === "daily") {
-    for (let offset = 6; offset >= 0; offset -= 1) {
-      const current = shiftDate(getTodayDate(), -offset);
-      const key = toIsoDate(current);
-      totals.set(key, {
-        label: current.toLocaleDateString("en-US", { weekday: "short" }),
-        sortKey: key,
-        total: 0
-      });
+  const monthlySales = db.prepare(`
+    SELECT id, sale_date, payment_method, total_amount
+    FROM sales
+    WHERE sale_date >= ? AND sale_date < ?
+    ORDER BY sale_date
+  `).all(toIsoDate(monthStart), toIsoDate(nextMonthStart));
+
+  const saleItems = db.prepare(`
+    SELECT
+      sale_items.sale_id,
+      sale_items.total,
+      inventory_items.category
+    FROM sale_items
+    JOIN inventory_items ON inventory_items.id = sale_items.inventory_item_id
+    JOIN sales ON sales.id = sale_items.sale_id
+    WHERE sales.sale_date >= ? AND sales.sale_date < ?
+  `).all(toIsoDate(monthStart), toIsoDate(nextMonthStart));
+  const salesById = new Map(monthlySales.map((sale) => [sale.id, sale]));
+
+  for (const sale of monthlySales) {
+    const dayIndex = Number(sale.sale_date.slice(8, 10)) - 1;
+    if (dayIndex >= 0 && dayIndex < numberOfDays && String(sale.payment_method || "").toLowerCase() === "gcash") {
+      gcashValues[dayIndex] += Number(sale.total_amount || 0);
     }
-
-    rows.forEach((sale) => {
-      if (totals.has(sale.sale_date)) {
-        totals.get(sale.sale_date).total += sale.total_amount;
-      }
-    });
   }
 
-  if (normalizedRange === "weekly") {
-    for (let offset = 5; offset >= 0; offset -= 1) {
-      const end = shiftDate(getTodayDate(), -(offset * 7));
-      const start = shiftDate(end, -6);
-      const key = `${toIsoDate(start)}_${toIsoDate(end)}`;
-      totals.set(key, {
-        label: `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${end.toLocaleDateString("en-US", { day: "numeric" })}`,
-        sortKey: key,
-        total: 0
-      });
+  for (const item of saleItems) {
+    const sale = salesById.get(item.sale_id);
+    if (!sale) continue;
+    const dayIndex = Number(sale.sale_date.slice(8, 10)) - 1;
+    if (dayIndex < 0 || dayIndex >= numberOfDays) continue;
+    const category = String(item.category || "").toLowerCase();
+    if (category.includes("load")) {
+      loadValues[dayIndex] += Number(item.total || 0);
+    } else {
+      productValues[dayIndex] += Number(item.total || 0);
     }
-
-    rows.forEach((sale) => {
-      const saleDate = startOfDay(new Date(`${sale.sale_date}T00:00:00`));
-      for (const [key, bucket] of totals.entries()) {
-        const [startIso, endIso] = key.split("_");
-        const start = startOfDay(new Date(`${startIso}T00:00:00`));
-        const end = startOfDay(new Date(`${endIso}T00:00:00`));
-        if (saleDate >= start && saleDate <= end) {
-          bucket.total += sale.total_amount;
-          break;
-        }
-      }
-    });
   }
 
-  if (normalizedRange === "monthly") {
-    for (let offset = 5; offset >= 0; offset -= 1) {
-      const current = new Date();
-      current.setDate(1);
-      current.setMonth(current.getMonth() - offset);
-      const key = `${current.getFullYear()}-${padNumber(current.getMonth() + 1)}`;
-      totals.set(key, {
-        label: current.toLocaleDateString("en-US", { month: "short" }),
-        sortKey: key,
-        total: 0
-      });
-    }
-
-    rows.forEach((sale) => {
-      const key = sale.sale_date.slice(0, 7);
-      if (totals.has(key)) totals.get(key).total += sale.total_amount;
-    });
-  }
-
-  if (normalizedRange === "yearly") {
-    const currentYear = getTodayDate().getFullYear();
-    for (let offset = 4; offset >= 0; offset -= 1) {
-      const year = currentYear - offset;
-      const key = String(year);
-      totals.set(key, {
-        label: key,
-        sortKey: key,
-        total: 0
-      });
-    }
-
-    rows.forEach((sale) => {
-      const key = sale.sale_date.slice(0, 4);
-      if (totals.has(key)) totals.get(key).total += sale.total_amount;
-    });
-  }
-
-  const series = [...totals.values()].sort((a, b) => a.sortKey.localeCompare(b.sortKey));
   return {
-    range: normalizedRange,
-    title: `${normalizedRange[0].toUpperCase()}${normalizedRange.slice(1)} Sales`,
-    labels: series.map((item) => item.label),
-    values: series.map((item) => item.total)
+    title: `Current Month Sales Trend (${today.toLocaleDateString("en-US", { month: "long", year: "numeric" })})`,
+    labels,
+    datasets: [
+      { label: "GCash", values: gcashValues },
+      { label: "Load", values: loadValues },
+      { label: "Products", values: productValues }
+    ]
   };
 }
 

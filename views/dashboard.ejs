@@ -19,18 +19,12 @@
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
               <div>
                 <div class="section-title" id="dashboardChartTitle"><%= chartTitle %></div>
-                <div class="mini-note">Switch the range to view daily, weekly, monthly, or yearly sales.</div>
-              </div>
-              <div class="d-flex gap-2 flex-wrap">
-                <button type="button" data-chart-range="daily" class="btn <%= chartRange === 'daily' ? 'btn-success' : 'btn-outline-secondary' %>">Daily</button>
-                <button type="button" data-chart-range="weekly" class="btn <%= chartRange === 'weekly' ? 'btn-success' : 'btn-outline-secondary' %>">Weekly</button>
-                <button type="button" data-chart-range="monthly" class="btn <%= chartRange === 'monthly' ? 'btn-success' : 'btn-outline-secondary' %>">Monthly</button>
-                <button type="button" data-chart-range="yearly" class="btn <%= chartRange === 'yearly' ? 'btn-success' : 'btn-outline-secondary' %>">Yearly</button>
+                <div class="mini-note">Daily trend for the current month, separated into GCash, Load, and Products.</div>
               </div>
             </div>
-            <div class="row g-4">
-              <div class="col-xl-6"><div class="h-100"><div class="mini-note mb-2">Bar View</div><canvas id="weeklySalesChart" height="180"></canvas></div></div>
-              <div class="col-xl-6"><div class="h-100"><div class="mini-note mb-2">Trend View</div><canvas id="salesTrendChart" height="180"></canvas></div></div>
+            <div class="h-100">
+              <div class="mini-note mb-2">Trend View</div>
+              <canvas id="salesTrendChart" height="110"></canvas>
             </div>
           </div>
         </div>
@@ -68,7 +62,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
   const chartTitleElement = document.getElementById("dashboardChartTitle");
-  const chartButtons = [...document.querySelectorAll("[data-chart-range]")];
   const dashboardMetricTotalProducts = document.getElementById("dashboardMetricTotalProducts");
   const dashboardMetricLowStock = document.getElementById("dashboardMetricLowStock");
   const dashboardMetricOutOfStock = document.getElementById("dashboardMetricOutOfStock");
@@ -80,61 +73,37 @@
   const rootStyles = getComputedStyle(document.body);
   const lineColor = rootStyles.getPropertyValue("--line-soft").trim();
   const textColor = rootStyles.getPropertyValue("--text-muted").trim();
-  const emerald = rootStyles.getPropertyValue("--brand-emerald").trim();
-  const teal = rootStyles.getPropertyValue("--brand-teal").trim();
+  const gcashBlue = rootStyles.getPropertyValue("--brand-blue").trim() || "#3b82f6";
+  const loadLightGreen = "#86efac";
+  const productsOrange = "#f59e0b";
 
   const sharedOptions = {
     responsive: true,
-    plugins: { legend: { display: false } },
+    plugins: {
+      legend: {
+        display: true,
+        position: "top",
+        labels: { color: textColor, usePointStyle: true, boxWidth: 10 }
+      }
+    },
     scales: {
       x: { ticks: { color: textColor }, grid: { color: lineColor } },
       y: { ticks: { color: textColor }, grid: { color: lineColor } }
     }
   };
 
-  const weeklySalesChart = new Chart(document.getElementById("weeklySalesChart"), {
-    type: "bar",
-    data: { labels: <%- JSON.stringify(chartLabels) %>, datasets: [{ label: "Sales", data: <%- JSON.stringify(chartValues) %>, borderRadius: 10, backgroundColor: emerald }] },
-    options: sharedOptions
-  });
-
   const salesTrendChart = new Chart(document.getElementById("salesTrendChart"), {
     type: "line",
-    data: { labels: <%- JSON.stringify(chartLabels) %>, datasets: [{ label: "Sales", data: <%- JSON.stringify(chartValues) %>, borderColor: teal, pointBackgroundColor: teal, fill: false, tension: 0.35 }] },
+    data: {
+      labels: <%- JSON.stringify(chartLabels) %>,
+      datasets: [
+        { label: "GCash", data: <%- JSON.stringify(chartDatasets[0].values) %>, borderColor: gcashBlue, backgroundColor: gcashBlue, pointBackgroundColor: gcashBlue, fill: false, tension: 0.35 },
+        { label: "Load", data: <%- JSON.stringify(chartDatasets[1].values) %>, borderColor: loadLightGreen, backgroundColor: loadLightGreen, pointBackgroundColor: loadLightGreen, fill: false, tension: 0.35 },
+        { label: "Products", data: <%- JSON.stringify(chartDatasets[2].values) %>, borderColor: productsOrange, backgroundColor: productsOrange, pointBackgroundColor: productsOrange, fill: false, tension: 0.35 }
+      ]
+    },
     options: sharedOptions
   });
-
-  function setActiveRange(range) {
-    chartButtons.forEach((button) => {
-      const active = button.dataset.chartRange === range;
-      button.classList.toggle("btn-success", active);
-      button.classList.toggle("btn-outline-secondary", !active);
-      button.disabled = active;
-    });
-  }
-
-  async function loadChartRange(range) {
-    setActiveRange(range);
-    try {
-      const response = await fetch(`/api/dashboard/chart?range=${encodeURIComponent(range)}`, {
-        headers: { Accept: "application/json" }
-      });
-      if (!response.ok) throw new Error("Failed to load chart data.");
-      const series = await response.json();
-      chartTitleElement.textContent = series.title;
-      weeklySalesChart.data.labels = series.labels;
-      weeklySalesChart.data.datasets[0].data = series.values;
-      weeklySalesChart.update();
-      salesTrendChart.data.labels = series.labels;
-      salesTrendChart.data.datasets[0].data = series.values;
-      salesTrendChart.update();
-      const url = new URL(window.location.href);
-      url.searchParams.set("range", range);
-      window.history.replaceState({}, "", url);
-    } catch (error) {
-      console.error(error);
-    }
-  }
 
   async function loadDashboardOverview() {
     try {
@@ -168,14 +137,24 @@
     }
   }
 
-  chartButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      loadChartRange(button.dataset.chartRange);
-    });
-  });
+  async function refreshDashboardChart() {
+    try {
+      const response = await fetch("/api/dashboard/chart", { headers: { Accept: "application/json" } });
+      if (!response.ok) throw new Error("Failed to load chart data.");
+      const chart = await response.json();
+      chartTitleElement.textContent = chart.title;
+      salesTrendChart.data.labels = chart.labels;
+      salesTrendChart.data.datasets[0].data = chart.datasets[0].values;
+      salesTrendChart.data.datasets[1].data = chart.datasets[1].values;
+      salesTrendChart.data.datasets[2].data = chart.datasets[2].values;
+      salesTrendChart.update();
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
-  setActiveRange("<%= chartRange %>");
   loadDashboardOverview();
+  refreshDashboardChart();
 </script>
 </body>
 </html>
