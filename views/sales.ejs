@@ -20,32 +20,11 @@
 
         <form method="post" action="/sales/add" id="saleForm">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="saleDate" value="<%= saleDateDefault %>">
+          <input type="hidden" name="paymentMethod" value="Cash">
           <div class="row g-4 align-items-start">
             <div class="col-12">
               <div class="vstack gap-4">
-                <div class="row g-3">
-                  <div class="col-md-4">
-                    <label class="form-label">Sale Date</label>
-                    <input class="form-control" type="date" name="saleDate" value="<%= saleDateDefault %>" required>
-                  </div>
-                  <div class="col-md-4">
-                    <label class="form-label">Payment Method</label>
-                    <select class="form-select" name="paymentMethod" required>
-                      <option value="Cash">Cash</option>
-                      <option value="GCash">GCash</option>
-                      <option value="Card">Card</option>
-                    </select>
-                  </div>
-                  <div class="col-md-4">
-                    <label class="form-label">Quick Quantity</label>
-                    <div class="input-group">
-                      <button class="btn btn-outline-secondary quick-qty-adjust" type="button" data-step="-1">-</button>
-                      <input class="form-control text-center" id="quickQty" type="number" min="1" value="1" inputmode="numeric">
-                      <button class="btn btn-outline-secondary quick-qty-adjust" type="button" data-step="1">+</button>
-                    </div>
-                  </div>
-                </div>
-
                 <div class="pos-search-wrap">
                   <label class="form-label">Item Search</label>
                   <div class="input-group input-group-lg">
@@ -223,7 +202,6 @@
   const inventoryItems = <%- JSON.stringify(inventory) %>;
   const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
   const searchInput = document.getElementById("quickItemSearch");
-  const quickQty = document.getElementById("quickQty");
   const suggestions = document.getElementById("quickSuggestions");
   const cartBody = document.getElementById("saleCartBody");
   const hiddenInputs = document.getElementById("saleHiddenInputs");
@@ -242,7 +220,6 @@
   const chipButtons = document.querySelectorAll(".pos-chip");
   const salesAccordion = document.getElementById("salesAccordion");
   const salesFilterButtons = [...document.querySelectorAll("[data-sales-filter]")];
-  const quickQtyAdjustButtons = [...document.querySelectorAll(".quick-qty-adjust")];
   const salesLiveAlert = document.getElementById("salesLiveAlert");
   const quickPicksToday = document.getElementById("quickPicksToday");
   const quickPicksWeek = document.getElementById("quickPicksWeek");
@@ -255,7 +232,6 @@
   let highlightedIndex = 0;
   let cart = loadStoredCart();
   let isCartOpen = false;
-  let quantityAdjustTimer;
 
   function loadStoredCart() {
     try {
@@ -320,14 +296,6 @@
     return Math.max(1, Number(value) || 1);
   }
 
-  function setQuickQty(value) {
-    quickQty.value = String(normalizeQuantity(value));
-  }
-
-  function stepQuickQty(step) {
-    setQuickQty(normalizeQuantity(quickQty.value) + step);
-  }
-
   function searchItems(query) {
     const normalized = normalizeQuery(query);
     if (!normalized) return inventoryItems.slice(0, 8);
@@ -390,7 +358,6 @@
 
     renderCart();
     searchInput.value = "";
-    setQuickQty(1);
     renderSuggestions(searchItems(""));
     focusSearch(true);
   }
@@ -451,14 +418,13 @@
 
   function addHighlightedSuggestion() {
     if (!filteredItems.length) return;
-    addItemToCart(filteredItems[highlightedIndex].id, quickQty.value);
+    addItemToCart(filteredItems[highlightedIndex].id, 1);
   }
 
   function resetForNewCustomer() {
     cart = [];
     renderCart();
     searchInput.value = "";
-    setQuickQty(1);
     renderSuggestions(searchItems(""));
     focusSearch(true);
   }
@@ -479,7 +445,7 @@
       </button>
     `).join("");
     container.querySelectorAll(".pos-chip").forEach((button) => {
-      button.addEventListener("click", () => addItemToCart(button.dataset.itemId, quickQty.value));
+      button.addEventListener("click", () => addItemToCart(button.dataset.itemId, 1));
     });
   }
 
@@ -581,35 +547,6 @@
     }
   });
 
-  quickQty.addEventListener("focus", () => quickQty.select());
-  quickQty.addEventListener("input", () => {
-    if (quickQty.value === "") return;
-    setQuickQty(quickQty.value);
-  });
-
-  function stopQuantityAdjust() {
-    window.clearInterval(quantityAdjustTimer);
-  }
-
-  quickQtyAdjustButtons.forEach((button) => {
-    const step = Number(button.dataset.step);
-    const startAdjust = () => {
-      stepQuickQty(step);
-      stopQuantityAdjust();
-      quantityAdjustTimer = window.setInterval(() => stepQuickQty(step), 90);
-    };
-
-    button.addEventListener("mousedown", startAdjust);
-    button.addEventListener("touchstart", startAdjust, { passive: true });
-    button.addEventListener("mouseup", stopQuantityAdjust);
-    button.addEventListener("mouseleave", stopQuantityAdjust);
-    button.addEventListener("touchend", stopQuantityAdjust);
-    button.addEventListener("click", (event) => {
-      event.preventDefault();
-      stepQuickQty(step);
-    });
-  });
-
   document.addEventListener("keydown", (event) => {
     if (event.key === "F2") {
       event.preventDefault();
@@ -623,7 +560,7 @@
   suggestions.addEventListener("click", (event) => {
     const button = event.target.closest("[data-item-id]");
     if (!button) return;
-    addItemToCart(button.dataset.itemId, quickQty.value);
+    addItemToCart(button.dataset.itemId, 1);
   });
 
   addSelectedButton.addEventListener("click", addHighlightedSuggestion);
@@ -635,7 +572,7 @@
   window.addEventListener("sales-cart-toggle-request", toggleCart);
 
   chipButtons.forEach((button) => {
-    button.addEventListener("click", () => addItemToCart(button.dataset.itemId, quickQty.value));
+    button.addEventListener("click", () => addItemToCart(button.dataset.itemId, 1));
   });
 
   salesFilterButtons.forEach((button) => {
@@ -719,7 +656,6 @@
 
   renderSuggestions(searchItems(""));
   renderCart();
-  setQuickQty(quickQty.value);
   focusSearch(true);
   if (new URLSearchParams(window.location.search).get("cart") === "open" || window.localStorage.getItem(cartOpenStorageKey) === "true") {
     setCartOpen(true);
