@@ -525,7 +525,7 @@ app.get("/logs", requireAuth, requireAdmin, (req, res) => {
 });
 
 app.get("/best-selling", requireAuth, requireAdmin, (req, res) => {
-  res.render("best-selling", { pageTitle: "Best Selling", todayLabel: todayLabel(), bestSelling: getBestSellingData(), formatCurrency });
+  res.redirect("/");
 });
 
 app.get("/settings", requireAuth, (req, res) => {
