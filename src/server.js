@@ -5,7 +5,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   addInventoryItem,
+  completeDigitalServiceRequest,
   createUserAccount,
+  createDigitalServiceRequest,
   createSale,
   deleteInventoryItem,
   exportInventoryCsv,
@@ -19,6 +21,7 @@ import {
   getReportsData,
   getSalesMetrics,
   getStoreSettings,
+  listDigitalServiceRequests,
   getUserById,
   getUserByUsername,
   initializeDatabase,
@@ -268,6 +271,18 @@ function formatLongDate(dateString) {
   return new Date(`${dateString}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+function formatDateTime(value) {
+  if (!value) return "-";
+  return new Date(`${String(value).replace(" ", "T")}Z`).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "Asia/Manila"
+  });
+}
+
 function isoDateToday() {
   const today = new Date();
   const month = String(today.getMonth() + 1).padStart(2, "0");
@@ -300,6 +315,22 @@ function normalizeRole(value) {
 
 function isFourDigitPin(value) {
   return /^\d{4}$/.test(String(value || "").trim());
+}
+
+function normalizePhoneDigits(value) {
+  return String(value || "").replace(/\D/g, "").slice(0, 11);
+}
+
+function formatPhilippineMobile(value) {
+  const digits = normalizePhoneDigits(value);
+  if (digits.length !== 11 || !digits.startsWith("09")) return "";
+  return `${digits.slice(0, 4)} ${digits.slice(4, 7)} ${digits.slice(7, 11)}`;
+}
+
+function parseCurrencyAmount(value) {
+  const match = String(value || "").match(/(\d+(?:\.\d+)?)/g);
+  if (!match?.length) return 0;
+  return Number(match[match.length - 1]);
 }
 
 app.get("/", requireAuth, (req, res) => {
@@ -449,8 +480,77 @@ app.get("/inventory", requireAuth, (req, res) => {
 app.get("/eload", requireAuth, (req, res) => {
   res.render("eload", {
     pageTitle: "Eload",
-    todayLabel: todayLabel()
+    todayLabel: todayLabel(),
+    requests: listDigitalServiceRequests(),
+    formatCurrency,
+    formatDateTime
   });
+});
+
+app.post("/eload/requests", requireAuth, (req, res) => {
+  try {
+    const currentUser = getUserById(req.session.user.id);
+    const serviceType = String(req.body.serviceType || "").trim().toLowerCase() === "gcash" ? "gcash" : "eload";
+    const mobileNumber = formatPhilippineMobile(req.body.mobileNumber);
+    if (!mobileNumber) throw new Error("Enter a valid 11-digit mobile number starting with 09.");
+
+    if (serviceType === "gcash") {
+      const amount = Number(req.body.amount || 0);
+      if (amount <= 0) throw new Error("Enter a valid GCash amount.");
+
+      createDigitalServiceRequest({
+        serviceType,
+        mobileNumber,
+        amount,
+        requestKind: String(req.body.cashFlow || "").trim() || "Cash In",
+        referenceNo: String(req.body.referenceNumber || "").trim(),
+        notes: String(req.body.notes || "").trim(),
+        requestedByUserId: currentUser?.id,
+        requestedByName: currentUser?.full_name || currentUser?.username || "System"
+      });
+    } else {
+      const loadType = String(req.body.loadType || "").trim().toLowerCase();
+      const network = String(req.body.network || "").trim().toUpperCase();
+      const loadValue = String(req.body.loadValue || "").trim();
+      const amount = loadType === "regular" ? Number(req.body.amount || 0) : parseCurrencyAmount(loadValue);
+
+      if (!network) throw new Error("Choose a network for the eload request.");
+      if (!loadValue) throw new Error("Choose a load option for the eload request.");
+      if (amount <= 0) throw new Error("Enter a valid eload amount.");
+
+      createDigitalServiceRequest({
+        serviceType,
+        mobileNumber,
+        amount,
+        network,
+        loadType,
+        loadValue,
+        notes: String(req.body.notes || "").trim(),
+        requestedByUserId: currentUser?.id,
+        requestedByName: currentUser?.full_name || currentUser?.username || "System"
+      });
+    }
+
+    setFlash(req, "success", "Digital service request created.");
+  } catch (error) {
+    setFlash(req, "danger", error.message);
+  }
+  res.redirect("/eload");
+});
+
+app.post("/eload/requests/:id/complete", requireAuth, (req, res) => {
+  try {
+    const currentUser = getUserById(req.session.user.id);
+    completeDigitalServiceRequest(Number(req.params.id), {
+      referenceNo: String(req.body.referenceNumber || "").trim(),
+      completedByUserId: currentUser?.id,
+      completedByName: currentUser?.full_name || currentUser?.username || "System"
+    });
+    setFlash(req, "success", "Digital service request marked as completed.");
+  } catch (error) {
+    setFlash(req, "danger", error.message);
+  }
+  res.redirect("/eload");
 });
 
 app.post("/inventory/add", requireAuth, requireAdmin, (req, res) => {
@@ -537,7 +637,8 @@ app.get("/logs", requireAuth, requireAdmin, (req, res) => {
     todayLabel: todayLabel(),
     selectedDate,
     logs: getLogsData(selectedDate),
-    formatCurrency
+    formatCurrency,
+    formatDateTime
   });
 });
 

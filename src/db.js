@@ -178,6 +178,28 @@ function createSchema() {
       Sale_Date TEXT NOT NULL,
       Time_Stamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+    CREATE TABLE IF NOT EXISTS digital_service_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      request_code TEXT NOT NULL UNIQUE,
+      service_type TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'Pending',
+      mobile_number TEXT NOT NULL DEFAULT '',
+      amount REAL NOT NULL DEFAULT 0,
+      request_kind TEXT NOT NULL DEFAULT '',
+      network TEXT NOT NULL DEFAULT '',
+      load_type TEXT NOT NULL DEFAULT '',
+      load_value TEXT NOT NULL DEFAULT '',
+      reference_no TEXT NOT NULL DEFAULT '',
+      notes TEXT NOT NULL DEFAULT '',
+      requested_by_user_id INTEGER,
+      requested_by_name TEXT NOT NULL DEFAULT '',
+      requested_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      completed_by_user_id INTEGER,
+      completed_by_name TEXT NOT NULL DEFAULT '',
+      completed_at TEXT,
+      FOREIGN KEY (requested_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+      FOREIGN KEY (completed_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+    );
     CREATE TABLE IF NOT EXISTS store_settings (
       id INTEGER PRIMARY KEY CHECK (id = 1),
       store_name TEXT NOT NULL,
@@ -216,6 +238,12 @@ function ensureInventorySchema() {
       updateStatus.run(computeStatus(item.stock_quantity, item.reorder_level), item.id);
     }
   }
+}
+
+function nextDigitalServiceRequestCode(serviceType) {
+  const prefix = String(serviceType || "").toLowerCase() === "gcash" ? "GC" : "EL";
+  const count = db.prepare("SELECT COUNT(*) AS count FROM digital_service_requests WHERE service_type = ?").get(serviceType).count + 1;
+  return `${prefix}${String(count).padStart(4, "0")}`;
 }
 
 export function createSale({ saleDate, paymentMethod, items, skipStockValidation = false, employeeName = "System", number = "", referenceNo = "" }) {
@@ -289,6 +317,70 @@ export function createSale({ saleDate, paymentMethod, items, skipStockValidation
   });
 
   createTx({ saleDate, paymentMethod, items, employeeName, number, referenceNo });
+}
+
+export function createDigitalServiceRequest(input) {
+  const serviceType = String(input.serviceType || "").trim().toLowerCase() === "gcash" ? "gcash" : "eload";
+  const requestCode = nextDigitalServiceRequestCode(serviceType);
+  const amount = Number(input.amount || 0);
+  if (amount <= 0) throw new Error("Amount must be greater than zero.");
+
+  db.prepare(`
+    INSERT INTO digital_service_requests
+    (request_code, service_type, status, mobile_number, amount, request_kind, network, load_type, load_value, reference_no, notes, requested_by_user_id, requested_by_name)
+    VALUES (?, ?, 'Pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    requestCode,
+    serviceType,
+    String(input.mobileNumber || "").trim(),
+    amount,
+    String(input.requestKind || "").trim(),
+    String(input.network || "").trim(),
+    String(input.loadType || "").trim(),
+    String(input.loadValue || "").trim(),
+    String(input.referenceNo || "").trim(),
+    String(input.notes || "").trim(),
+    input.requestedByUserId ? Number(input.requestedByUserId) : null,
+    String(input.requestedByName || "System").trim()
+  );
+}
+
+export function completeDigitalServiceRequest(requestId, input) {
+  const request = db.prepare("SELECT * FROM digital_service_requests WHERE id = ?").get(requestId);
+  if (!request) throw new Error("Request not found.");
+  if (request.status === "Completed") throw new Error("This request is already completed.");
+
+  const serviceType = String(request.service_type || "").toLowerCase();
+  const referenceNo = String(input.referenceNo || request.reference_no || "").trim();
+  if (serviceType === "gcash" && !referenceNo) {
+    throw new Error("GCash completion requires a reference number.");
+  }
+
+  db.prepare(`
+    UPDATE digital_service_requests
+    SET status = 'Completed',
+        reference_no = ?,
+        completed_by_user_id = ?,
+        completed_by_name = ?,
+        completed_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).run(
+    referenceNo,
+    input.completedByUserId ? Number(input.completedByUserId) : null,
+    String(input.completedByName || "System").trim(),
+    requestId
+  );
+}
+
+export function listDigitalServiceRequests() {
+  return db.prepare(`
+    SELECT *
+    FROM digital_service_requests
+    ORDER BY CASE WHEN status = 'Pending' THEN 0 ELSE 1 END, requested_at DESC, id DESC
+  `).all().map((row) => ({
+    ...row,
+    amount: Number(row.amount || 0)
+  }));
 }
 
 function backfillLogTablesFromSales() {
@@ -775,68 +867,52 @@ export function getLogsData(dateKey = toIsoDate(getTodayDate())) {
     };
   });
 
-  const eloadLogs = db.prepare(`
+  const digitalRequestLogs = db.prepare(`
     SELECT
-      Transaction_Code AS transactionCode,
-      Sale_Date AS date,
-      Item_Name AS itemName,
-      Network AS network,
-      Number AS number,
-      Amount AS amount,
-      Emp_Mng AS employee
-    FROM ELoad_Log
-    WHERE Sale_Date = ?
-    ORDER BY Time_Stamp DESC, Log_ID DESC
+      request_code AS requestCode,
+      service_type AS serviceType,
+      status,
+      mobile_number AS number,
+      amount,
+      request_kind AS requestKind,
+      network,
+      load_type AS loadType,
+      load_value AS loadValue,
+      reference_no AS referenceNo,
+      requested_by_name AS requestedBy,
+      requested_at AS requestedAt,
+      completed_by_name AS completedBy,
+      completed_at AS completedAt
+    FROM digital_service_requests
+    WHERE date(datetime(requested_at, '+8 hours')) = ?
+    ORDER BY requested_at DESC, id DESC
   `).all(selectedDate).map((row) => ({
     ...row,
-    amount: Number(row.amount || 0),
-    paymentMethod: "Eload"
+    amount: Number(row.amount || 0)
   }));
 
-  const gcashLogs = db.prepare(`
-    SELECT
-      GCash_Log.Transaction_Code AS transactionCode,
-      GCash_Log.Sale_Date AS date,
-      GCash_Log.Amount AS totalAmount,
-      GCash_Log.Number AS number,
-      GCash_Log.Reference_No AS referenceNo,
-      GCash_Log.Cash_IN_OUT AS cashInOut,
-      GCash_Log.Emp_Mng AS employee,
-      COALESCE(sales.total_amount, GCash_Log.Amount) AS saleTotal,
-      COALESCE((SELECT COUNT(*) FROM sale_items JOIN sales AS sale_ref ON sale_ref.id = sale_items.sale_id WHERE sale_ref.transaction_code = GCash_Log.Transaction_Code), 0) AS itemCount
-    FROM GCash_Log
-    LEFT JOIN sales ON sales.transaction_code = GCash_Log.Transaction_Code
-    WHERE GCash_Log.Sale_Date = ?
-    ORDER BY GCash_Log.Time_Stamp DESC, GCash_Log.Log_ID DESC
-  `).all(selectedDate).map((row) => {
-    const productTotal = db.prepare(`
-      SELECT COALESCE(SUM(Selling_Log_Items.Selling_Price * Selling_Log_Items.Quantity), 0) AS total
-      FROM Products_Log
-      JOIN Selling_Log_Items ON Selling_Log_Items.Log_ID = Products_Log.Log_ID
-      WHERE Products_Log.Transaction_Code = ?
-    `).get(row.transactionCode).total;
-    const eloadTotal = db.prepare(`
-      SELECT COALESCE(SUM(Amount), 0) AS total
-      FROM ELoad_Log
-      WHERE Transaction_Code = ?
-    `).get(row.transactionCode).total;
-    return {
+  const eloadLogs = digitalRequestLogs
+    .filter((row) => row.serviceType === "eload")
+    .map((row) => ({
       ...row,
-      itemCount: Number(row.itemCount || 0),
-      productTotal: Number(productTotal || 0),
-      eloadTotal: Number(eloadTotal || 0),
-      totalAmount: Number(row.totalAmount || 0)
-    };
-  });
+      paymentMethod: "Eload"
+    }));
+
+  const gcashLogs = digitalRequestLogs
+    .filter((row) => row.serviceType === "gcash")
+    .map((row) => ({
+      ...row,
+      totalAmount: Number(row.amount || 0)
+    }));
 
   return {
     selectedDate,
-      summary: {
-        productCount: productLogs.length,
-        productTotal: productLogs.reduce((sum, entry) => sum + entry.totalAmount, 0),
-        eloadCount: eloadLogs.length,
-        eloadTotal: eloadLogs.reduce((sum, entry) => sum + entry.amount, 0),
-        gcashCount: gcashLogs.length,
+    summary: {
+      productCount: productLogs.length,
+      productTotal: productLogs.reduce((sum, entry) => sum + entry.totalAmount, 0),
+      eloadCount: eloadLogs.length,
+      eloadTotal: eloadLogs.reduce((sum, entry) => sum + entry.amount, 0),
+      gcashCount: gcashLogs.length,
       gcashTotal: gcashLogs.reduce((sum, entry) => sum + entry.totalAmount, 0)
     },
     productLogs,
