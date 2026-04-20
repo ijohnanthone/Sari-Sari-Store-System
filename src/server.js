@@ -243,6 +243,23 @@ function requireAdminApi(req, res, next) {
   return next();
 }
 
+function requireSalesAccess(req, res, next) {
+  const currentUser = getUserById(req.session.user.id);
+  if (!currentUser || (currentUser.role !== "Admin" && currentUser.role !== "User")) {
+    setFlash(req, "danger", "You do not have access to that page.");
+    return res.redirect("/");
+  }
+  return next();
+}
+
+function requireSalesApiAccess(req, res, next) {
+  const currentUser = getUserById(req.session.user.id);
+  if (!currentUser || (currentUser.role !== "Admin" && currentUser.role !== "User")) {
+    return res.status(403).json({ error: "Sales access required." });
+  }
+  return next();
+}
+
 function formatCurrency(value) {
   return Number(value || 0).toLocaleString("en-PH", { style: "currency", currency: "PHP" });
 }
@@ -328,7 +345,7 @@ app.get("/api/inventory", requireApiAuth, (req, res) => {
   });
 });
 
-app.get("/api/sales", requireApiAuth, requireAdminApi, (req, res) => {
+app.get("/api/sales", requireApiAuth, requireSalesApiAccess, (req, res) => {
   const filter = normalizeSalesFilter(req.query.filter);
   const sales = listSales(filter);
   return res.json({
@@ -338,11 +355,11 @@ app.get("/api/sales", requireApiAuth, requireAdminApi, (req, res) => {
   });
 });
 
-app.get("/api/sales/recommendations", requireApiAuth, requireAdminApi, (req, res) => {
+app.get("/api/sales/recommendations", requireApiAuth, requireSalesApiAccess, (req, res) => {
   return res.json(getQuickSaleRecommendations());
 });
 
-app.get("/api/sales/metrics", requireApiAuth, requireAdminApi, (req, res) => {
+app.get("/api/sales/metrics", requireApiAuth, requireSalesApiAccess, (req, res) => {
   return res.json(getSalesMetrics());
 });
 
@@ -351,7 +368,7 @@ app.get("/api/logs", requireApiAuth, requireAdminApi, (req, res) => {
   return res.json(getLogsData(date));
 });
 
-app.post("/api/sales", requireApiAuth, requireAdminApi, (req, res) => {
+app.post("/api/sales", requireApiAuth, requireSalesApiAccess, (req, res) => {
   try {
     const currentUser = getUserById(req.session.user.id);
     const items = Array.isArray(req.body.items) ? req.body.items : [];
@@ -466,7 +483,7 @@ app.post("/inventory/:id/delete", requireAuth, requireAdmin, (req, res) => {
   res.redirect("/inventory");
 });
 
-app.get("/sales", requireAuth, requireAdmin, (req, res) => {
+app.get("/sales", requireAuth, requireSalesAccess, (req, res) => {
   const filter = req.query.filter || "all";
   res.render("sales", {
     pageTitle: "Sales",
@@ -482,7 +499,7 @@ app.get("/sales", requireAuth, requireAdmin, (req, res) => {
   });
 });
 
-app.post("/sales/add", requireAuth, requireAdmin, (req, res) => {
+app.post("/sales/add", requireAuth, requireSalesAccess, (req, res) => {
   try {
     const currentUser = getUserById(req.session.user.id);
     const ids = Array.isArray(req.body.itemId) ? req.body.itemId : [req.body.itemId];
@@ -587,13 +604,14 @@ app.post("/users/add", requireAuth, requireAdmin, (req, res) => {
   const password = String(req.body.password || "");
   const pin = String(req.body.pin || "").trim();
   const securityPin = String(req.body.securityPin || "").trim();
+  const role = normalizeRole(req.body.role);
 
-  if (!username || !fullName || !email || !phone || !password || !pin) {
-    setFlash(req, "danger", "All account fields are required.");
+  if (!username || !fullName || !email || !phone || !password) {
+    setFlash(req, "danger", "All account fields except PIN are required for standard users.");
     return res.redirect("/users");
   }
 
-  if (normalizeRole(req.body.role) === "Admin" && !isFourDigitPin(pin)) {
+  if (role === "Admin" && !isFourDigitPin(pin)) {
     setFlash(req, "danger", "New user PIN must be exactly 4 digits.");
     return res.redirect("/users");
   }
@@ -607,7 +625,7 @@ app.post("/users/add", requireAuth, requireAdmin, (req, res) => {
     createUserAccount({
       username,
       fullName,
-      role: normalizeRole(req.body.role),
+      role,
       email,
       phone,
       password,
