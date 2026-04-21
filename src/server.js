@@ -17,7 +17,6 @@ import {
   getDashboardChartData,
   getDatabasePath,
   getLogsData,
-  getQuickSaleRecommendations,
   getReportsData,
   getSalesMetrics,
   getStoreSettings,
@@ -93,6 +92,7 @@ function buildNotifications(storeSettings) {
   const notifications = [];
   const inventory = listInventory("");
   const metrics = getSalesMetrics();
+  const pendingEloadRequests = listDigitalServiceRequests().filter((request) => request.service_type === "eload" && request.status === "Pending");
   const lowStockItems = inventory.filter((item) => item.status === "Low Stock");
   const outOfStockItems = inventory.filter((item) => item.status === "Out of Stock");
 
@@ -131,6 +131,16 @@ function buildNotifications(storeSettings) {
       icon: "bi-calendar-week",
       title: "Weekly sales",
       message: `${formatCurrency(metrics.weeklyTotal)} recorded in the last 7 days.`
+    });
+  }
+
+  if (pendingEloadRequests.length) {
+    notifications.push({
+      tone: "primary",
+      icon: "bi-phone",
+      title: "Pending eLoad requests",
+      message: `${pendingEloadRequests.length} eLoad request${pendingEloadRequests.length === 1 ? "" : "s"} waiting to be completed.`,
+      link: "/eload"
     });
   }
 
@@ -386,10 +396,6 @@ app.get("/api/sales", requireApiAuth, requireSalesApiAccess, (req, res) => {
   });
 });
 
-app.get("/api/sales/recommendations", requireApiAuth, requireSalesApiAccess, (req, res) => {
-  return res.json(getQuickSaleRecommendations());
-});
-
 app.get("/api/sales/metrics", requireApiAuth, requireSalesApiAccess, (req, res) => {
   return res.json(getSalesMetrics());
 });
@@ -403,14 +409,25 @@ app.post("/api/sales", requireApiAuth, requireSalesApiAccess, (req, res) => {
   try {
     const currentUser = getUserById(req.session.user.id);
     const items = Array.isArray(req.body.items) ? req.body.items : [];
+    const digitalItems = Array.isArray(req.body.digitalItems) ? req.body.digitalItems : [];
     const normalizedItems = items.map((item) => ({
       inventoryItemId: Number(item.inventoryItemId),
       quantity: Number(item.quantity),
       price: Number(item.price),
       total: Number(item.quantity) * Number(item.price)
     })).filter((item) => item.inventoryItemId && item.quantity > 0);
+    const normalizedDigitalItems = digitalItems.map((item) => ({
+      mobileNumber: String(item.mobileNumber || "").trim(),
+      network: String(item.network || "").trim(),
+      loadType: String(item.loadType || "").trim(),
+      loadValue: String(item.loadValue || "").trim(),
+      notes: String(item.notes || "").trim(),
+      quantity: Math.max(1, Number(item.quantity) || 1),
+      price: Number(item.price),
+      total: Math.max(1, Number(item.quantity) || 1) * Number(item.price)
+    })).filter((item) => item.mobileNumber && item.network && item.loadValue && item.price > 0);
 
-    if (!normalizedItems.length) {
+    if (!normalizedItems.length && !normalizedDigitalItems.length) {
       return res.status(400).json({ error: "Add at least one item to the sale." });
     }
 
@@ -418,14 +435,16 @@ app.post("/api/sales", requireApiAuth, requireSalesApiAccess, (req, res) => {
       saleDate: req.body.saleDate || isoDateToday(),
       paymentMethod: req.body.paymentMethod,
       items: normalizedItems,
-      employeeName: currentUser?.full_name || currentUser?.username || "System"
+      digitalItems: normalizedDigitalItems,
+      employeeName: currentUser?.full_name || currentUser?.username || "System",
+      requestedByUserId: currentUser?.id,
+      completedByUserId: currentUser?.id
     });
 
     return res.json({
       success: true,
       message: "Sale recorded successfully.",
       metrics: getSalesMetrics(),
-      recommendations: getQuickSaleRecommendations(),
       sales: listSales("all").slice(0, 20)
     });
   } catch (error) {
@@ -592,8 +611,7 @@ app.get("/sales", requireAuth, requireSalesAccess, (req, res) => {
     filter,
     metrics: getSalesMetrics(),
     saleDateDefault: isoDateToday(),
-    inventory: listInventory("").filter((item) => item.stock_quantity > 0),
-    quickPicks: getQuickSaleRecommendations(),
+    inventory: listInventory("").filter((item) => item.status !== "Out of Stock"),
     formatCurrency,
     formatLongDate
   });

@@ -50,7 +50,7 @@
                         <td class="fw-semibold"><%= entry.transactionCode %></td>
                         <td class="text-end"><%= formatCurrency(entry.totalAmount) %></td>
                         <td><%= entry.employee || "-" %></td>
-                        <td><%= entry.timeStamp %></td>
+                        <td><%= formatDateTime(entry.timeStamp) %></td>
                         <td class="text-end">
                           <button
                             class="btn btn-sm btn-outline-secondary rounded-circle product-log-popover"
@@ -279,7 +279,7 @@
           <td class="fw-semibold">${escapeHtml(entry.transactionCode)}</td>
           <td class="text-end">${peso.format(entry.totalAmount)}</td>
           <td>${escapeHtml(entry.employee || "-")}</td>
-          <td>${escapeHtml(entry.timeStamp || "-")}</td>
+          <td>${escapeHtml(formatDateTimeClient(entry.timeStamp))}</td>
           <td class="text-end">
             <button
               class="btn btn-sm btn-outline-secondary rounded-circle product-log-popover"

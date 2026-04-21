@@ -127,7 +127,11 @@
                 </div>
 
                 <div class="col-12">
-                  <button class="btn btn-success px-4" type="submit">Create Eload Request</button>
+                  <div id="eloadActionAlert"></div>
+                  <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-success px-4" type="submit">Create Eload Request</button>
+                    <button class="btn btn-outline-success px-4" type="button" id="eloadAddToCartButton">Add to Cart</button>
+                  </div>
                 </div>
               </form>
             </div>
@@ -212,6 +216,7 @@
               </div>
               <span class="badge rounded-pill text-bg-warning"><%= requests.filter((entry) => entry.status === "Pending").length %> open</span>
             </div>
+            <div id="pendingRequestActionAlert" class="mb-3"></div>
 
             <% const pendingRequests = requests.filter((entry) => entry.status === "Pending"); %>
             <% if (!pendingRequests.length) { %>
@@ -230,12 +235,22 @@
                         <div class="mini-note">
                           Requested by <strong><%= entry.requested_by_name %></strong> on <strong><%= formatDateTime(entry.requested_at) %></strong>
                         </div>
+                        </div>
+                        <div class="text-lg-end">
+                          <div class="fw-semibold text-success"><%= formatCurrency(entry.amount) %></div>
+                          <div class="d-inline-flex align-items-center gap-2">
+                            <div class="mini-note mb-0"><%= entry.mobile_number %></div>
+                            <button
+                              class="btn btn-sm btn-outline-secondary pending-request-copy"
+                              type="button"
+                              data-copy-number="<%= entry.mobile_number %>"
+                              aria-label="Copy mobile number"
+                            >
+                              <i class="bi bi-clipboard"></i>
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <div class="text-lg-end">
-                        <div class="fw-semibold text-success"><%= formatCurrency(entry.amount) %></div>
-                        <div class="mini-note"><%= entry.mobile_number %></div>
-                      </div>
-                    </div>
 
                     <div class="row g-3 mb-3">
                       <div class="col-md-3">
@@ -279,61 +294,6 @@
           </div>
         </div>
 
-        <div class="col-12">
-          <div class="content-card p-4">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
-              <div>
-                <div class="section-title">Request Records</div>
-                <div class="mini-note">Each record keeps both sides of the handoff: who requested it and who completed it, including completion date/time.</div>
-              </div>
-              <span class="badge rounded-pill text-bg-light border"><%= requests.length %> total</span>
-            </div>
-
-            <div class="table-responsive">
-              <table class="table align-middle">
-                <thead>
-                  <tr>
-                    <th>Request</th>
-                    <th>Details</th>
-                    <th>Requested</th>
-                    <th>Completed</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <% if (!requests.length) { %>
-                    <tr><td colspan="5" class="text-center py-4 mini-note">No digital service requests recorded yet.</td></tr>
-                  <% } %>
-                  <% requests.forEach((entry) => { %>
-                    <tr>
-                      <td>
-                        <div class="fw-semibold"><%= entry.request_code %></div>
-                        <div class="mini-note"><%= entry.service_type === "gcash" ? "GCash" : "Eload" %> | <%= entry.mobile_number %></div>
-                      </td>
-                      <td>
-                        <div class="fw-semibold"><%= formatCurrency(entry.amount) %></div>
-                        <div class="mini-note">
-                          <%= entry.service_type === "gcash" ? `${entry.request_kind} | Ref: ${entry.reference_no || "Pending"}` : `${entry.network} | ${entry.load_value}` %>
-                        </div>
-                      </td>
-                      <td>
-                        <div class="fw-semibold"><%= entry.requested_by_name %></div>
-                        <div class="mini-note"><%= formatDateTime(entry.requested_at) %></div>
-                      </td>
-                      <td>
-                        <div class="fw-semibold"><%= entry.completed_by_name || "-" %></div>
-                        <div class="mini-note"><%= entry.completed_at ? formatDateTime(entry.completed_at) : "-" %></div>
-                      </td>
-                      <td>
-                        <span class="badge <%= entry.status === "Completed" ? "text-bg-success" : "text-bg-warning" %>"><%= entry.status %></span>
-                      </td>
-                    </tr>
-                  <% }) %>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
   </main>
@@ -372,6 +332,7 @@
   const eloadGcashSection = document.getElementById("eloadGcashSection");
   const eloadRegularAmount = document.getElementById("eloadRegularAmount");
   const eloadGcashSelect = document.getElementById("eloadGcashSelect");
+  const eloadNotes = document.getElementById("eloadNotes");
   const eloadPreviewTitle = document.getElementById("eloadPreviewTitle");
   const eloadPreviewSubtitle = document.getElementById("eloadPreviewSubtitle");
   const eloadPreviewMode = document.getElementById("eloadPreviewMode");
@@ -382,6 +343,8 @@
   const eloadNetworkValue = document.getElementById("eloadNetworkValue");
   const eloadLoadValue = document.getElementById("eloadLoadValue");
   const eloadAmountValue = document.getElementById("eloadAmountValue");
+  const eloadActionAlert = document.getElementById("eloadActionAlert");
+  const eloadAddToCartButton = document.getElementById("eloadAddToCartButton");
   const gcashMobileNumber = document.getElementById("gcashMobileNumber");
   const gcashReferenceNumber = document.getElementById("gcashReferenceNumber");
   const gcashCashFlow = document.getElementById("gcashCashFlow");
@@ -393,9 +356,12 @@
   const gcashPreviewFlow = document.getElementById("gcashPreviewFlow");
   const gcashPreviewAmount = document.getElementById("gcashPreviewAmount");
   const loadTypeInputs = Array.from(document.querySelectorAll("input[name='loadType']"));
+  const pendingRequestActionAlert = document.getElementById("pendingRequestActionAlert");
 
   let selectedNetwork = "";
   let selectedService = "eload";
+  const salesCartStorageKey = "sales-cart-state";
+  const salesCartOpenStorageKey = "sales-cart-open-on-load";
 
   function onlyDigits(value) {
     return String(value || "").replace(/\D/g, "").slice(0, 11);
@@ -417,6 +383,67 @@
     const match = String(value || "").match(/(\d+(?:\.\d+)?)/g);
     if (!match || !match.length) return 0;
     return Number(match[match.length - 1]);
+  }
+
+  function showEloadActionAlert(type, message) {
+    eloadActionAlert.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show mt-3 mb-0" role="alert">${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+  }
+
+  function showPendingRequestActionAlert(type, message) {
+    if (!pendingRequestActionAlert) return;
+    pendingRequestActionAlert.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show mb-0" role="alert">${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+  }
+
+  function getEloadDraft() {
+    const digits = onlyDigits(eloadMobileNumber.value);
+    const loadType = getLoadType();
+    const selectedValue = loadType === "promo"
+      ? (eloadPromoSelect.value || "")
+      : loadType === "regular"
+        ? (eloadRegularAmount.value ? `Regular ${eloadRegularAmount.value}` : "")
+        : (eloadGcashSelect.value || "");
+    const amount = loadType === "regular" ? Number(eloadRegularAmount.value || 0) : parseLastAmount(selectedValue);
+
+    if (digits.length !== 11 || !digits.startsWith("09")) {
+      throw new Error("Enter a valid 11-digit mobile number before adding to cart.");
+    }
+    if (!selectedNetwork) {
+      throw new Error("Choose a network before adding to cart.");
+    }
+    if (!selectedValue) {
+      throw new Error("Choose a load option before adding to cart.");
+    }
+    if (amount <= 0) {
+      throw new Error("Enter a valid amount before adding to cart.");
+    }
+
+    return {
+      id: `eload-${Date.now()}`,
+      type: "eload",
+      name: `${selectedNetwork} ${selectedValue}`,
+      mobileNumber: formatPhilippineMobile(digits),
+      network: selectedNetwork,
+      loadType,
+      loadValue: selectedValue,
+      notes: eloadNotes.value.trim(),
+      quantity: 1,
+      price: amount
+    };
+  }
+
+  function addEloadDraftToCart() {
+    try {
+      const draft = getEloadDraft();
+      const raw = window.localStorage.getItem(salesCartStorageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      const cart = Array.isArray(parsed) ? parsed : [];
+      cart.push(draft);
+      window.localStorage.setItem(salesCartStorageKey, JSON.stringify(cart));
+      window.localStorage.setItem(salesCartOpenStorageKey, "true");
+      window.location.href = "/sales?cart=open";
+    } catch (error) {
+      showEloadActionAlert("danger", error.message);
+    }
   }
 
   function renderNetworks() {
@@ -540,6 +567,17 @@
   eloadPromoSelect.addEventListener("change", updatePreview);
   eloadRegularAmount.addEventListener("input", updatePreview);
   eloadGcashSelect.addEventListener("change", updatePreview);
+  eloadAddToCartButton.addEventListener("click", addEloadDraftToCart);
+  document.querySelectorAll(".pending-request-copy").forEach((button) => {
+    button.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(button.dataset.copyNumber || "");
+        showPendingRequestActionAlert("success", "Mobile number copied.");
+      } catch (error) {
+        showPendingRequestActionAlert("danger", "Failed to copy mobile number.");
+      }
+    });
+  });
 
   updateServiceCards();
   renderNetworks();
