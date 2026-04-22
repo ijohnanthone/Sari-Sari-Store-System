@@ -10,8 +10,7 @@
         <div class="col-md-6 col-xl-4"><a class="metric-card metric-card-link p-4 h-100 d-block text-reset text-decoration-none" href="/inventory?status=Low%20Stock"><div class="d-flex justify-content-between"><div><div class="mini-note">Low Stock Items</div><div class="display-6 fw-bold text-warning" id="dashboardMetricLowStock"><%= metrics.lowStockItems %></div><div class="mini-note">Need attention soon</div></div><div class="stat-icon yellow"><i class="bi bi-exclamation-triangle fs-4"></i></div></div></a></div>
         <div class="col-md-6 col-xl-4"><a class="metric-card metric-card-link p-4 h-100 d-block text-reset text-decoration-none" href="/inventory?status=Out%20of%20Stock"><div class="d-flex justify-content-between"><div><div class="mini-note">Out of Stock</div><div class="display-6 fw-bold text-danger" id="dashboardMetricOutOfStock"><%= metrics.outOfStockItems %></div><div class="mini-note">Reorder immediately</div></div><div class="stat-icon red"><i class="bi bi-x-octagon fs-4"></i></div></div></a></div>
         <div class="col-md-6 col-xl-4"><div class="metric-card p-4 h-100"><div class="d-flex justify-content-between"><div><div class="mini-note">Daily Sales</div><div class="h2 fw-bold" id="dashboardMetricDailySales"><%= formatCurrency(metrics.dailySales) %></div><div class="mini-note">As of <%= currentDateLabel %></div></div><div class="stat-icon green"><i class="bi bi-cash-stack fs-4"></i></div></div></div></div>
-        <div class="col-md-6 col-xl-4"><div class="metric-card p-4 h-100"><div class="d-flex justify-content-between"><div><div class="mini-note">Weekly Sales</div><div class="h2 fw-bold" id="dashboardMetricWeeklySales"><%= formatCurrency(metrics.weeklySales) %></div><div class="mini-note">Rolling 7-day performance</div></div><div class="stat-icon teal"><i class="bi bi-calendar-week fs-4"></i></div></div></div></div>
-        <div class="col-md-6 col-xl-4"><div class="metric-card p-4 h-100"><div class="d-flex justify-content-between"><div><div class="mini-note">Monthly Sales</div><div class="h2 fw-bold" id="dashboardMetricMonthlySales"><%= formatCurrency(metrics.monthlySales) %></div><div class="mini-note">Rolling 30-day revenue</div></div><div class="stat-icon cyan"><i class="bi bi-graph-up-arrow fs-4"></i></div></div></div></div>
+        <div class="col-md-6 col-xl-4"><div class="metric-card p-4 h-100"><div class="d-flex justify-content-between"><div><div class="mini-note">Monthly Sales</div><div class="h2 fw-bold" id="dashboardMetricMonthlySales"><%= formatCurrency(metrics.monthlySales) %></div><div class="mini-note">Rolling 30-day revenue</div><div class="mt-2 small"><div class="fw-semibold text-warning" id="dashboardMetricMonthlyProductsTotal"></div><div class="fw-semibold text-success" id="dashboardMetricMonthlyLoadTotal"></div><div class="fw-semibold text-primary" id="dashboardMetricMonthlyGcashTotal"></div></div></div><div class="stat-icon cyan"><i class="bi bi-graph-up-arrow fs-4"></i></div></div></div></div>
       </div>
       <div class="row g-4 mb-4">
         <div class="col-12">
@@ -120,8 +119,10 @@
   const dashboardMetricLowStock = document.getElementById("dashboardMetricLowStock");
   const dashboardMetricOutOfStock = document.getElementById("dashboardMetricOutOfStock");
   const dashboardMetricDailySales = document.getElementById("dashboardMetricDailySales");
-  const dashboardMetricWeeklySales = document.getElementById("dashboardMetricWeeklySales");
   const dashboardMetricMonthlySales = document.getElementById("dashboardMetricMonthlySales");
+  const dashboardMetricMonthlyProductsTotal = document.getElementById("dashboardMetricMonthlyProductsTotal");
+  const dashboardMetricMonthlyLoadTotal = document.getElementById("dashboardMetricMonthlyLoadTotal");
+  const dashboardMetricMonthlyGcashTotal = document.getElementById("dashboardMetricMonthlyGcashTotal");
   const dashboardBestSellingCard = document.getElementById("dashboardBestSellingCard");
   const dashboardLowStockList = document.getElementById("dashboardLowStockList");
   const dashboardPendingEloadList = document.getElementById("dashboardPendingEloadList");
@@ -140,6 +141,23 @@
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
+  }
+
+  function formatPeso(value) {
+    return new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(value || 0);
+  }
+
+  function sumDatasetValues(dataset) {
+    return (dataset?.values || dataset?.data || []).reduce((sum, value) => sum + Number(value || 0), 0);
+  }
+
+  function renderMonthlySalesBreakdown(datasets) {
+    const gcashTotal = sumDatasetValues(datasets[0]);
+    const loadTotal = sumDatasetValues(datasets[1]);
+    const productsTotal = sumDatasetValues(datasets[2]);
+    dashboardMetricMonthlyProductsTotal.textContent = `Products: ${formatPeso(productsTotal)}`;
+    dashboardMetricMonthlyLoadTotal.textContent = `eLoad: ${formatPeso(loadTotal)}`;
+    dashboardMetricMonthlyGcashTotal.textContent = `GCash: ${formatPeso(gcashTotal)}`;
   }
 
   const sharedOptions = {
@@ -178,9 +196,8 @@
       dashboardMetricTotalProducts.textContent = String(payload.metrics.totalProducts);
       dashboardMetricLowStock.textContent = String(payload.metrics.lowStockItems);
       dashboardMetricOutOfStock.textContent = String(payload.metrics.outOfStockItems);
-      dashboardMetricDailySales.textContent = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(payload.metrics.dailySales);
-      dashboardMetricWeeklySales.textContent = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(payload.metrics.weeklySales);
-      dashboardMetricMonthlySales.textContent = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(payload.metrics.monthlySales);
+      dashboardMetricDailySales.textContent = formatPeso(payload.metrics.dailySales);
+      dashboardMetricMonthlySales.textContent = formatPeso(payload.metrics.monthlySales);
 
       if (payload.bestSellingItem && dashboardBestSellingCard) {
         dashboardBestSellingCard.innerHTML = `
@@ -247,11 +264,17 @@
       salesTrendChart.data.datasets[1].data = chart.datasets[1].values;
       salesTrendChart.data.datasets[2].data = chart.datasets[2].values;
       salesTrendChart.update();
+      renderMonthlySalesBreakdown(chart.datasets);
     } catch (error) {
       console.error(error);
     }
   }
 
+  renderMonthlySalesBreakdown([
+    { values: <%- JSON.stringify(chartDatasets[0].values) %> },
+    { values: <%- JSON.stringify(chartDatasets[1].values) %> },
+    { values: <%- JSON.stringify(chartDatasets[2].values) %> }
+  ]);
   loadDashboardOverview();
   refreshDashboardChart();
 </script>

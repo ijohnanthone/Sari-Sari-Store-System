@@ -1034,6 +1034,11 @@ export function getDashboardData() {
   const summary = getInventorySummary();
   const salesMetrics = getSalesMetrics();
   const bestSelling = getBestSellingData();
+  const chartData = getDashboardChartData();
+  const gcashMonthly = chartData.datasets.find((dataset) => dataset.label === "GCash")?.values.reduce((sum, value) => sum + Number(value || 0), 0) || 0;
+  const loadMonthly = chartData.datasets.find((dataset) => dataset.label === "Load")?.values.reduce((sum, value) => sum + Number(value || 0), 0) || 0;
+  const productsMonthly = chartData.datasets.find((dataset) => dataset.label === "Products")?.values.reduce((sum, value) => sum + Number(value || 0), 0) || 0;
+  const combinedMonthly = gcashMonthly + loadMonthly + productsMonthly;
   const pendingEloadRequests = listDigitalServiceRequests()
     .filter((request) => request.status === "Pending" && request.service_type === "eload")
     .slice(0, 5);
@@ -1055,8 +1060,7 @@ export function getDashboardData() {
       lowStockItems: summary.lowStock,
       outOfStockItems: summary.outOfStock,
       dailySales: salesMetrics.todayTotal,
-      weeklySales: salesMetrics.weeklyTotal,
-      monthlySales: salesMetrics.monthlyTotal
+      monthlySales: combinedMonthly
     },
     lowStockItems: inventory.filter((item) => item.status !== "In Stock").slice(0, 4),
     pendingEloadRequests,
