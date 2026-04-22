@@ -43,7 +43,6 @@
                   <div class="input-group input-group-lg">
                     <span class="input-group-text"><i class="bi bi-upc-scan"></i></span>
                     <input class="form-control" id="quickItemSearch" placeholder="Type item name, category, or code">
-                    <button class="btn btn-success" id="addSelectedItem" type="button">Add Item</button>
                   </div>
                   <div class="pos-suggestions list-group mt-2 d-none" id="quickSuggestions"></div>
                 </div>
@@ -187,7 +186,6 @@
   const cartItemCount = document.getElementById("cartItemCount");
   const cartUnitCount = document.getElementById("cartUnitCount");
   const saleForm = document.getElementById("saleForm");
-  const addSelectedButton = document.getElementById("addSelectedItem");
   const clearCartButton = document.getElementById("clearCartButton");
   const newCustomerButton = document.getElementById("newCustomerButton");
   const closeCartButton = document.getElementById("closeCartButton");
@@ -307,15 +305,27 @@
     }
 
       suggestions.innerHTML = items.map((item, index) => `
-        <button class="list-group-item list-group-item-action pos-suggestion ${index === 0 ? "active" : ""}" type="button" data-item-id="${item.id}">
-          <div class="d-flex justify-content-between gap-3">
-            <span class="fw-semibold">${escapeHtml(item.name)}</span>
-            <span>${peso.format(item.selling_price)}</span>
+        <div class="list-group-item pos-suggestion ${index === 0 ? "active" : ""}" data-item-id="${item.id}">
+          <div class="d-flex justify-content-between align-items-center gap-3">
+            <div class="min-w-0">
+              <div class="d-flex justify-content-between gap-3">
+                <span class="fw-semibold">${escapeHtml(item.name)}</span>
+                <span>${peso.format(item.selling_price)}</span>
+              </div>
+              <div class="mini-note">${escapeHtml(item.category)}</div>
+            </div>
+            <button class="btn btn-sm btn-success pos-suggestion-add" type="button" data-item-id="${item.id}">Add</button>
           </div>
-          <div class="mini-note">${escapeHtml(item.category)}</div>
-        </button>
+        </div>
       `).join("");
     suggestions.classList.remove("d-none");
+  }
+
+  function hideSuggestions() {
+    filteredItems = [];
+    highlightedIndex = 0;
+    suggestions.innerHTML = "";
+    suggestions.classList.add("d-none");
   }
 
   function setSuggestionHighlight(index) {
@@ -534,12 +544,11 @@
   });
 
   suggestions.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-item-id]");
+    const button = event.target.closest(".pos-suggestion-add");
     if (!button) return;
     addItemToCart(button.dataset.itemId, 1);
   });
 
-  addSelectedButton.addEventListener("click", addHighlightedSuggestion);
   clearCartButton.addEventListener("click", resetForNewCustomer);
   newCustomerButton.addEventListener("click", resetForNewCustomer);
   closeCartButton.addEventListener("click", () => setCartOpen(false));

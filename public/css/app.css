@@ -519,6 +519,15 @@ body[data-color-scheme="Amber"] {
   text-align: left;
 }
 
+.pos-suggestion .min-w-0 {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.pos-suggestion-add {
+  flex: 0 0 auto;
+}
+
 .pos-suggestion.active,
 .pos-suggestion:hover {
   background: var(--surface-soft);
