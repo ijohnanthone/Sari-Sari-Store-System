@@ -27,22 +27,20 @@
     <div class="d-flex flex-wrap align-items-center gap-3">
       <div class="d-flex align-items-center gap-3">
         <div class="dropdown notification-dropdown">
-          <button class="btn notification-button position-relative text-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Open notifications">
+          <button class="btn notification-button position-relative text-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Open notifications" id="notificationToggleButton">
             <i class="bi bi-bell fs-5"></i>
-            <% if (notifications.length) { %>
-              <span class="notification-count position-absolute top-0 start-100 translate-middle"><%= notifications.length %></span>
-            <% } %>
+            <span class="notification-count position-absolute top-0 start-100 translate-middle <%= notifications.length ? '' : 'd-none' %>" id="notificationCountBadge"><%= notifications.length %></span>
           </button>
-          <div class="dropdown-menu dropdown-menu-end notification-menu p-0 overflow-hidden">
+          <div class="dropdown-menu dropdown-menu-end notification-menu p-0 overflow-hidden" id="notificationMenu">
             <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
               <div>
                 <div class="fw-semibold">Notifications</div>
-                <div class="mini-note"><%= notifications.length ? `${notifications.length} active alert${notifications.length === 1 ? "" : "s"}` : "You're all caught up." %></div>
+                <div class="mini-note" id="notificationSummary"><%= notifications.length ? `${notifications.length} active alert${notifications.length === 1 ? "" : "s"}` : "You're all caught up." %></div>
               </div>
               <a class="btn btn-sm btn-outline-secondary" href="/settings">Settings</a>
             </div>
             <% if (notifications.length) { %>
-              <div class="list-group list-group-flush">
+              <div class="list-group list-group-flush" id="notificationList">
                 <% notifications.forEach((notification) => { %>
                   <% if (notification.link) { %>
                     <a class="list-group-item border-0 px-3 py-3 notification-item notification-link" href="<%= notification.link %>">
@@ -72,7 +70,7 @@
                 <% }) %>
               </div>
             <% } else { %>
-              <div class="px-3 py-4 text-center mini-note">No notifications to show.</div>
+              <div class="px-3 py-4 text-center mini-note" id="notificationList">No notifications to show.</div>
             <% } %>
           </div>
         </div>
@@ -129,9 +127,82 @@
 
     const globalCartToggleButton = document.getElementById("globalCartToggleButton");
     const globalCartFabCount = document.getElementById("globalCartFabCount");
+    const notificationToggleButton = document.getElementById("notificationToggleButton");
+    const notificationCountBadge = document.getElementById("notificationCountBadge");
+    const notificationSummary = document.getElementById("notificationSummary");
+    const notificationMenu = document.getElementById("notificationMenu");
     const salesCartStorageKey = "sales-cart-state";
     const salesCartOpenStorageKey = "sales-cart-open-on-load";
     const currentPath = window.location.pathname;
+    let notificationsRefreshInFlight = false;
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function renderNotifications(notifications) {
+      notificationCountBadge.textContent = String(notifications.length);
+      notificationCountBadge.classList.toggle("d-none", notifications.length <= 0);
+      notificationSummary.textContent = notifications.length
+        ? `${notifications.length} active alert${notifications.length === 1 ? "" : "s"}`
+        : "You're all caught up.";
+
+      const existingList = document.getElementById("notificationList");
+      if (!existingList) return;
+
+      if (!notifications.length) {
+        existingList.className = "px-3 py-4 text-center mini-note";
+        existingList.innerHTML = "No notifications to show.";
+      } else {
+        existingList.className = "list-group list-group-flush";
+        existingList.innerHTML = notifications.map((notification) => {
+          const content = `
+            <div class="d-flex gap-3">
+              <div class="notification-icon text-${escapeHtml(notification.tone)}">
+                <i class="bi ${escapeHtml(notification.icon)}"></i>
+              </div>
+              <div>
+                <div class="fw-semibold">${escapeHtml(notification.title)}</div>
+                <div class="mini-note">${escapeHtml(notification.message)}</div>
+              </div>
+            </div>
+          `;
+          if (notification.link) {
+            return `<a class="list-group-item border-0 px-3 py-3 notification-item notification-link" href="${escapeHtml(notification.link)}">${content}</a>`;
+          }
+          return `<div class="list-group-item border-0 px-3 py-3 notification-item">${content}</div>`;
+        }).join("");
+      }
+
+      notificationToggleButton.setAttribute(
+        "aria-label",
+        notifications.length ? `Open notifications with ${notifications.length} active alert${notifications.length === 1 ? "" : "s"}` : "Open notifications"
+      );
+    }
+
+    async function refreshNotifications() {
+      if (notificationsRefreshInFlight || document.visibilityState !== "visible") return;
+      notificationsRefreshInFlight = true;
+
+      try {
+        const response = await fetch("/api/notifications", {
+          headers: { Accept: "application/json" },
+          cache: "no-store"
+        });
+        if (!response.ok) throw new Error("Failed to load notifications.");
+        const payload = await response.json();
+        renderNotifications(Array.isArray(payload.notifications) ? payload.notifications : []);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        notificationsRefreshInFlight = false;
+      }
+    }
 
     function readCartCount() {
       try {
@@ -165,5 +236,9 @@
       window.localStorage.setItem(salesCartOpenStorageKey, "true");
       window.location.href = "/sales?cart=open";
     });
+
+    if (notificationMenu) {
+      window.setInterval(refreshNotifications, 10000);
+    }
   });
 </script>
