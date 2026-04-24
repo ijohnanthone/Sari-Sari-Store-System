@@ -353,6 +353,17 @@ function parseCurrencyAmount(value) {
   return Number(match[match.length - 1]);
 }
 
+function buildDigitalRequestsFingerprint(requests) {
+  return requests.map((request) => [
+    request.id,
+    request.status,
+    request.reference_no || "",
+    request.completed_at || "",
+    request.failed_at || "",
+    request.failed_reason || ""
+  ].join(":")).join("|");
+}
+
 app.get("/", requireAuth, (req, res) => {
   const dashboard = getDashboardData();
   const chartData = getDashboardChartData();
@@ -417,6 +428,15 @@ app.get("/api/sales/metrics", requireApiAuth, requireSalesApiAccess, (req, res) 
 app.get("/api/logs", requireApiAuth, requireAdminApi, (req, res) => {
   const date = String(req.query.date || isoDateToday());
   return res.json(getLogsData(date));
+});
+
+app.get("/api/eload/requests", requireApiAuth, (req, res) => {
+  const requests = listDigitalServiceRequests();
+  return res.json({
+    pendingCount: requests.filter((request) => request.status === "Pending").length,
+    fingerprint: buildDigitalRequestsFingerprint(requests),
+    requests
+  });
 });
 
 app.post("/api/sales", requireApiAuth, requireSalesApiAccess, (req, res) => {
@@ -512,10 +532,12 @@ app.get("/inventory", requireAuth, (req, res) => {
 });
 
 app.get("/eload", requireAuth, (req, res) => {
+  const requests = listDigitalServiceRequests();
   res.render("eload", {
     pageTitle: "Eload",
     todayLabel: todayLabel(),
-    requests: listDigitalServiceRequests(),
+    requests,
+    requestsFingerprint: buildDigitalRequestsFingerprint(requests),
     formatCurrency,
     formatDateTime
   });

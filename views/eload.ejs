@@ -398,9 +398,13 @@
   const failRequestForm = document.getElementById("failRequestForm");
   const failRequestCodeText = document.getElementById("failRequestCodeText");
   const failedReasonInput = document.getElementById("failedReasonInput");
+  const initialRequestsFingerprint = <%- JSON.stringify(requestsFingerprint) %>;
 
   let selectedNetwork = "";
   let selectedService = "eload";
+  let currentRequestsFingerprint = initialRequestsFingerprint;
+  let queueRefreshPending = false;
+  let queueRefreshInFlight = false;
   const salesCartStorageKey = "sales-cart-state";
   const salesCartOpenStorageKey = "sales-cart-open-on-load";
 
@@ -433,6 +437,46 @@
   function showPendingRequestActionAlert(type, message) {
     if (!pendingRequestActionAlert) return;
     pendingRequestActionAlert.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show mb-0" role="alert">${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+  }
+
+  function hasActiveFormEditing() {
+    const activeElement = document.activeElement;
+    if (!activeElement) return false;
+    return activeElement.matches("input, textarea, select");
+  }
+
+  function reloadQueuePage() {
+    window.location.reload();
+  }
+
+  async function checkQueueUpdates() {
+    if (queueRefreshInFlight || document.visibilityState !== "visible") return;
+    queueRefreshInFlight = true;
+
+    try {
+      const response = await fetch("/api/eload/requests", {
+        headers: { Accept: "application/json" },
+        cache: "no-store"
+      });
+      if (!response.ok) throw new Error("Failed to refresh queue.");
+      const payload = await response.json();
+      if (payload.fingerprint === currentRequestsFingerprint) return;
+
+      currentRequestsFingerprint = payload.fingerprint;
+      if (hasActiveFormEditing()) {
+        if (!queueRefreshPending) {
+          queueRefreshPending = true;
+          showPendingRequestActionAlert("info", "The request queue changed from another account. This page will refresh when you leave the current field.");
+        }
+        return;
+      }
+
+      reloadQueuePage();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      queueRefreshInFlight = false;
+    }
   }
 
   function getEloadDraft() {
@@ -631,12 +675,21 @@
     });
   }
 
+  document.addEventListener("focusout", () => {
+    if (!queueRefreshPending) return;
+    window.setTimeout(() => {
+      if (hasActiveFormEditing()) return;
+      reloadQueuePage();
+    }, 0);
+  });
+
   updateServiceCards();
   renderNetworks();
   renderPromoOptions();
   updateLoadSections();
   updatePreview();
   updateGcashPreview();
+  window.setInterval(checkQueueUpdates, 10000);
 </script>
 </body>
 </html>
