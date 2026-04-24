@@ -398,6 +398,12 @@ app.get("/api/dashboard/overview", requireApiAuth, (req, res) => {
   });
 });
 
+app.get("/api/notifications", requireApiAuth, (req, res) => {
+  return res.json({
+    notifications: buildNotifications(getStoreSettings())
+  });
+});
+
 app.get("/api/inventory", requireApiAuth, (req, res) => {
   const search = String(req.query.search || "");
   const status = normalizeInventoryStatus(req.query.status);

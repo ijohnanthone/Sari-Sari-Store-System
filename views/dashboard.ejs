@@ -133,6 +133,8 @@
   const gcashBlue = rootStyles.getPropertyValue("--brand-blue").trim() || "#3b82f6";
   const loadLightGreen = "#86efac";
   const productsOrange = "#f59e0b";
+  let dashboardOverviewRefreshInFlight = false;
+  let dashboardChartRefreshInFlight = false;
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -189,8 +191,13 @@
   });
 
   async function loadDashboardOverview() {
+    if (dashboardOverviewRefreshInFlight || document.visibilityState !== "visible") return;
+    dashboardOverviewRefreshInFlight = true;
     try {
-      const response = await fetch("/api/dashboard/overview", { headers: { Accept: "application/json" } });
+      const response = await fetch("/api/dashboard/overview", {
+        headers: { Accept: "application/json" },
+        cache: "no-store"
+      });
       if (!response.ok) throw new Error("Failed to load dashboard overview.");
       const payload = await response.json();
       dashboardMetricTotalProducts.textContent = String(payload.metrics.totalProducts);
@@ -250,12 +257,19 @@
       }
     } catch (error) {
       console.error(error);
+    } finally {
+      dashboardOverviewRefreshInFlight = false;
     }
   }
 
   async function refreshDashboardChart() {
+    if (dashboardChartRefreshInFlight || document.visibilityState !== "visible") return;
+    dashboardChartRefreshInFlight = true;
     try {
-      const response = await fetch("/api/dashboard/chart", { headers: { Accept: "application/json" } });
+      const response = await fetch("/api/dashboard/chart", {
+        headers: { Accept: "application/json" },
+        cache: "no-store"
+      });
       if (!response.ok) throw new Error("Failed to load chart data.");
       const chart = await response.json();
       chartTitleElement.textContent = chart.title;
@@ -267,6 +281,8 @@
       renderMonthlySalesBreakdown(chart.datasets);
     } catch (error) {
       console.error(error);
+    } finally {
+      dashboardChartRefreshInFlight = false;
     }
   }
 
@@ -277,6 +293,8 @@
   ]);
   loadDashboardOverview();
   refreshDashboardChart();
+  window.setInterval(loadDashboardOverview, 10000);
+  window.setInterval(refreshDashboardChart, 15000);
 </script>
 </body>
 </html>
