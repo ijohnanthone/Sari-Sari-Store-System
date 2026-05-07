@@ -783,6 +783,88 @@ body[data-color-scheme="Amber"] {
     display: none !important;
   }
 
+  .dashboard-metric-card {
+    aspect-ratio: 1;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem !important;
+  }
+
+  .dashboard-metrics-grid {
+    --bs-gutter-x: 0.75rem;
+    --bs-gutter-y: 0.75rem;
+  }
+
+  .dashboard-metrics-grid > [class*="col-"] {
+    flex: 0 0 auto;
+    width: 33.333333%;
+  }
+
+  .dashboard-metric-body {
+    position: relative;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center !important;
+    gap: 0.5rem;
+    width: 100%;
+    min-width: 0;
+    text-align: center;
+  }
+
+  .dashboard-metric-copy {
+    display: contents;
+  }
+
+  .dashboard-metric-note,
+  .dashboard-metric-breakdown {
+    display: none !important;
+  }
+
+  .dashboard-metric-label {
+    display: block;
+    order: 3;
+    width: 100%;
+    font-size: clamp(0.64rem, 2.7vw, 0.78rem);
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  .dashboard-metric-value {
+    position: absolute;
+    top: -0.3rem;
+    right: calc(50% - 2.05rem);
+    z-index: 1;
+    max-width: 4.6rem;
+    min-width: 1.45rem;
+    min-height: 1.45rem;
+    margin: 0;
+    padding: 0.2rem 0.35rem;
+    border-radius: 999px;
+    background: var(--surface-card);
+    border: 1px solid var(--line-soft);
+    box-shadow: 0 0.45rem 1rem rgba(13, 148, 136, 0.12);
+    color: var(--text-strong) !important;
+    font-size: clamp(0.68rem, 2.7vw, 0.82rem);
+    line-height: 1.05;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    order: 2;
+  }
+
+  .dashboard-metric-card .stat-icon {
+    flex: 0 0 auto;
+    order: 1;
+  }
+
+  @media (max-width: 379.98px) {
+    .dashboard-metrics-grid > [class*="col-"] {
+      width: 50%;
+    }
+  }
+
   .pos-cart-flyout {
     right: 1rem;
     bottom: 5.75rem;
