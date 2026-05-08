@@ -6,11 +6,13 @@ import { fileURLToPath } from "node:url";
 import {
   addInventoryItem,
   completeDigitalServiceRequest,
+  createCategory,
   createUserAccount,
   createSupplier,
   createDigitalServiceRequest,
   createSale,
   deleteInventoryItem,
+  deleteCategory,
   failDigitalServiceRequest,
   exportInventoryCsv,
   exportSalesCsv,
@@ -26,6 +28,7 @@ import {
   getUserById,
   getUserByUsername,
   initializeDatabase,
+  listCategories,
   listUsers,
   listInventory,
   listSuppliers,
@@ -35,6 +38,7 @@ import {
   updateUserAccount,
   updateUserPin,
   updateAppearance,
+  updateCategory,
   updateInventoryItem,
   updateNotifications,
   updatePassword,
@@ -531,7 +535,7 @@ app.get("/inventory", requireAuth, (req, res) => {
     summary: getInventorySummary(),
     search,
     status,
-    categories: [...new Set(listInventory("").map((item) => item.category))].sort(),
+    categories: listCategories(),
     suppliers: listSuppliers(),
     formatCurrency
   });
@@ -727,7 +731,7 @@ app.get("/settings", requireAuth, (req, res) => {
   const currentUser = getUserById(req.session.user.id);
   const isAdmin = currentUser?.role === "Admin";
   const allowedTabs = isAdmin
-    ? new Set(["store", "profile", "notifications", "appearance", "suppliers", "data"])
+    ? new Set(["store", "profile", "notifications", "appearance", "categories", "suppliers", "data"])
     : new Set(["profile", "appearance"]);
   const activeTab = allowedTabs.has(requestedTab) ? requestedTab : (isAdmin ? "store" : "profile");
 
@@ -736,6 +740,7 @@ app.get("/settings", requireAuth, (req, res) => {
     todayLabel: todayLabel(),
     settings: getStoreSettings(),
     userProfile: currentUser,
+    categories: isAdmin ? listCategories() : [],
     suppliers: isAdmin ? listSuppliers() : [],
     activeTab
   });
@@ -923,6 +928,36 @@ app.post("/settings/appearance", requireAuth, (req, res) => {
   });
   setFlash(req, "success", "Appearance preferences saved.");
   res.redirect("/settings");
+});
+
+app.post("/settings/categories/add", requireAuth, requireAdmin, (req, res) => {
+  try {
+    createCategory(req.body);
+    setFlash(req, "success", "Category added.");
+  } catch (error) {
+    setFlash(req, "danger", error.message);
+  }
+  res.redirect("/settings?tab=categories");
+});
+
+app.post("/settings/categories/:id/update", requireAuth, requireAdmin, (req, res) => {
+  try {
+    updateCategory(Number(req.params.id), req.body);
+    setFlash(req, "success", "Category updated.");
+  } catch (error) {
+    setFlash(req, "danger", error.message);
+  }
+  res.redirect("/settings?tab=categories");
+});
+
+app.post("/settings/categories/:id/delete", requireAuth, requireAdmin, (req, res) => {
+  try {
+    deleteCategory(Number(req.params.id));
+    setFlash(req, "success", "Category deleted.");
+  } catch (error) {
+    setFlash(req, "danger", error.message);
+  }
+  res.redirect("/settings?tab=categories");
 });
 
 app.post("/settings/suppliers/add", requireAuth, requireAdmin, (req, res) => {
