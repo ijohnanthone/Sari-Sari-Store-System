@@ -101,7 +101,7 @@
         <div class="modal-body">
             <div class="row g-3">
               <div class="col-md-8"><label class="form-label">Item Name</label><input class="form-control" name="name" required></div>
-              <div class="col-md-4"><label class="form-label">Category</label><input class="form-control" name="category" list="categoryList" required></div>
+              <div class="col-md-4"><label class="form-label">Category</label><select class="form-select" name="category" required><option value="" selected disabled>Select category</option><% categories.forEach((category) => { %><option value="<%= category.category_name %>"><%= category.category_name %></option><% }) %></select></div>
               <div class="col-md-6"><label class="form-label">Supplier</label><input class="form-control" name="supplier" list="supplierList" placeholder="e.g. Monde Nissin Distributor"></div>
               <div class="col-md-4"><label class="form-label">Status</label><select class="form-select" name="status" required><option value="In Stock">In Stock</option><option value="Low Stock">Low Stock</option><option value="Out of Stock">Out of Stock</option></select></div>
               <div class="col-md-4"><label class="form-label">Unit Price</label><input class="form-control" type="number" step="0.01" name="unitPrice" min="0" required></div>
@@ -123,7 +123,7 @@
           <div class="modal-body">
             <div class="row g-3">
               <div class="col-md-8"><label class="form-label">Item Name</label><input class="form-control" name="name" value="<%= item.name %>" required></div>
-              <div class="col-md-4"><label class="form-label">Category</label><input class="form-control" name="category" list="categoryList" value="<%= item.category %>" required></div>
+              <div class="col-md-4"><label class="form-label">Category</label><select class="form-select" name="category" required><% categories.forEach((category) => { %><option value="<%= category.category_name %>" <%= item.category === category.category_name ? "selected" : "" %>><%= category.category_name %></option><% }) %></select></div>
               <div class="col-md-6"><label class="form-label">Supplier</label><input class="form-control" name="supplier" list="supplierList" value="<%= item.supplier || '' %>" placeholder="e.g. Monde Nissin Distributor"></div>
               <div class="col-md-4"><label class="form-label">Status</label><select class="form-select" name="status" required><option value="In Stock" <%= item.status === "In Stock" ? "selected" : "" %>>In Stock</option><option value="Low Stock" <%= item.status === "Low Stock" ? "selected" : "" %>>Low Stock</option><option value="Out of Stock" <%= item.status === "Out of Stock" ? "selected" : "" %>>Out of Stock</option></select></div>
               <div class="col-md-4"><label class="form-label">Unit Price</label><input class="form-control" type="number" step="0.01" name="unitPrice" min="0" value="<%= item.unit_price %>" required></div>
@@ -137,7 +137,6 @@
   </div>
 <% }) %>
 <% } %>
-<datalist id="categoryList"><% categories.forEach((category) => { %><option value="<%= category %>"></option><% }) %></datalist>
 <datalist id="supplierList"><% suppliers.forEach((supplier) => { %><option value="<%= supplier.supplier_name %>"></option><% }) %></datalist>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>

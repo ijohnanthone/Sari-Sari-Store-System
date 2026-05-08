@@ -235,6 +235,11 @@ function createSchema() {
       address TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+    CREATE TABLE IF NOT EXISTS categories (
+      category_id INTEGER PRIMARY KEY AUTOINCREMENT,
+      category_name TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 }
 
@@ -298,6 +303,25 @@ function seedSuppliersFromInventory() {
   const insertSupplier = db.prepare("INSERT INTO suppliers (supplier_name, contact_no, address) VALUES (?, '', '')");
   const insertMany = withTransaction((supplierNames) => {
     supplierNames.forEach((name) => insertSupplier.run(name));
+  });
+  insertMany(names);
+}
+
+function seedCategoriesFromInventory() {
+  const existingCount = db.prepare("SELECT COUNT(*) AS count FROM categories").get().count;
+  if (existingCount) return;
+
+  const names = [...new Set(
+    db.prepare("SELECT category FROM inventory_items WHERE TRIM(COALESCE(category, '')) <> '' ORDER BY category").all()
+      .map((row) => String(row.category || "").trim())
+      .filter(Boolean)
+  )];
+
+  if (!names.length) return;
+
+  const insertCategory = db.prepare("INSERT INTO categories (category_name) VALUES (?)");
+  const insertMany = withTransaction((categoryNames) => {
+    categoryNames.forEach((name) => insertCategory.run(name));
   });
   insertMany(names);
 }
@@ -743,6 +767,7 @@ export function initializeDatabase() {
   ensureDigitalServiceRequestSchema();
   seedDefaults();
   seedSuppliersFromInventory();
+  seedCategoriesFromInventory();
   backfillLogTablesFromSales();
   syncDigitalRequestLogs();
 }
@@ -813,6 +838,54 @@ export function deleteSupplier(supplierId) {
   });
 
   deleteTx();
+}
+
+export function listCategories() {
+  return db.prepare(`
+    SELECT category_id, category_name
+    FROM categories
+    ORDER BY category_name COLLATE NOCASE, category_id
+  `).all();
+}
+
+export function createCategory(input) {
+  const categoryName = String(input.categoryName || "").trim();
+  if (!categoryName) throw new Error("Category name is required.");
+  if (db.prepare("SELECT 1 FROM categories WHERE lower(category_name) = lower(?)").get(categoryName)) {
+    throw new Error("Category name already exists.");
+  }
+
+  db.prepare("INSERT INTO categories (category_name) VALUES (?)").run(categoryName);
+}
+
+export function updateCategory(categoryId, input) {
+  const categoryName = String(input.categoryName || "").trim();
+  if (!categoryName) throw new Error("Category name is required.");
+
+  const category = db.prepare("SELECT category_name FROM categories WHERE category_id = ?").get(categoryId);
+  if (!category) throw new Error("Category not found.");
+  const duplicate = db.prepare("SELECT category_id FROM categories WHERE lower(category_name) = lower(?) AND category_id <> ?").get(categoryName, categoryId);
+  if (duplicate) throw new Error("Category name already exists.");
+
+  const updateTx = withTransaction(() => {
+    db.prepare("UPDATE categories SET category_name = ? WHERE category_id = ?").run(categoryName, categoryId);
+
+    if (category.category_name !== categoryName) {
+      db.prepare("UPDATE inventory_items SET category = ? WHERE category = ?").run(categoryName, category.category_name);
+    }
+  });
+
+  updateTx();
+}
+
+export function deleteCategory(categoryId) {
+  const category = db.prepare("SELECT category_name FROM categories WHERE category_id = ?").get(categoryId);
+  if (!category) throw new Error("Category not found.");
+
+  const usageCount = db.prepare("SELECT COUNT(*) AS count FROM inventory_items WHERE category = ?").get(category.category_name).count;
+  if (usageCount > 0) throw new Error("This category is used by inventory items and cannot be deleted.");
+
+  db.prepare("DELETE FROM categories WHERE category_id = ?").run(categoryId);
 }
 
 export function getStoreSettings() {
@@ -909,13 +982,25 @@ export function getInventorySummary() {
 }
 
 export function addInventoryItem(input) {
+  const category = String(input.category || "").trim();
+  if (!category) throw new Error("Category is required.");
+  if (!db.prepare("SELECT 1 FROM categories WHERE category_name = ?").get(category)) {
+    throw new Error("Choose a valid category from Settings.");
+  }
+
   db.prepare(`INSERT INTO inventory_items (name, category, supplier, status, stock_quantity, unit_price, selling_price, reorder_level) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
-    .run(input.name, input.category, String(input.supplier || "").trim(), normalizeItemStatus(input.status), 0, Number(input.unitPrice), Number(input.sellingPrice), 0);
+    .run(input.name, category, String(input.supplier || "").trim(), normalizeItemStatus(input.status), 0, Number(input.unitPrice), Number(input.sellingPrice), 0);
 }
 
 export function updateInventoryItem(id, input) {
+  const category = String(input.category || "").trim();
+  if (!category) throw new Error("Category is required.");
+  if (!db.prepare("SELECT 1 FROM categories WHERE category_name = ?").get(category)) {
+    throw new Error("Choose a valid category from Settings.");
+  }
+
   db.prepare(`UPDATE inventory_items SET name = ?, category = ?, supplier = ?, status = ?, stock_quantity = ?, unit_price = ?, selling_price = ?, reorder_level = ? WHERE id = ?`)
-    .run(input.name, input.category, String(input.supplier || "").trim(), normalizeItemStatus(input.status), 0, Number(input.unitPrice), Number(input.sellingPrice), 0, id);
+    .run(input.name, category, String(input.supplier || "").trim(), normalizeItemStatus(input.status), 0, Number(input.unitPrice), Number(input.sellingPrice), 0, id);
 }
 
 export function deleteInventoryItem(id) {
@@ -1324,10 +1409,12 @@ export function resetAllData() {
     DELETE FROM sales;
     DELETE FROM inventory_items;
     DELETE FROM suppliers;
+    DELETE FROM categories;
     DELETE FROM store_settings;
     DELETE FROM users;
     DELETE FROM sqlite_sequence;
   `);
   seedDefaults();
   seedSuppliersFromInventory();
+  seedCategoriesFromInventory();
 }
