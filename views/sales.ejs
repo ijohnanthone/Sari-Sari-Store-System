@@ -368,7 +368,17 @@
   }
 
   function showSalesAlert(type, message) {
-    salesLiveAlert.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show mb-4" role="alert">${escapeHtml(message)}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+    salesLiveAlert.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show app-flash-popup" role="alert">${escapeHtml(message)}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+    const alertElement = salesLiveAlert.querySelector(".alert");
+    window.setTimeout(() => {
+      if (!alertElement) return;
+      if (typeof bootstrap !== "undefined" && bootstrap.Alert) {
+        bootstrap.Alert.getOrCreateInstance(alertElement).close();
+        return;
+      }
+      alertElement.classList.remove("show");
+      window.setTimeout(() => alertElement.remove(), 180);
+    }, 5000);
   }
 
   function updateSalesMetrics(metrics) {

@@ -379,6 +379,13 @@ body[data-theme="Dark Mode"] .pos-cart-fab {
   box-shadow: 0 0.9rem 2.2rem rgba(124, 58, 237, 0.36);
 }
 
+body[data-theme="Dark Mode"] .pos-cart-fab-count {
+  background: #ffffff;
+  color: #111827;
+  border: 1px solid rgba(15, 23, 42, 0.16);
+  text-shadow: none;
+}
+
 body[data-theme="Dark Mode"] .btn-outline-secondary {
   background: rgba(17, 20, 52, 0.62);
   border-color: rgba(167, 139, 250, 0.28);
@@ -627,6 +634,62 @@ body[data-theme="Dark Mode"] .mobile-bottom-tabs {
   border-radius: 1rem;
   box-shadow: var(--shadow-card);
   background: var(--surface-card);
+}
+
+.notification-popup-stack {
+  position: fixed;
+  top: 5.7rem;
+  right: 1.25rem;
+  z-index: 1080;
+  display: grid;
+  gap: 0.75rem;
+  width: min(23rem, calc(100vw - 1.5rem));
+  pointer-events: none;
+}
+
+.notification-popup {
+  display: block;
+  width: 100%;
+  padding: 1rem;
+  border: 1px solid var(--input-border);
+  border-radius: 1rem;
+  background: var(--surface-card);
+  color: var(--text-strong);
+  box-shadow: var(--shadow-card);
+  text-decoration: none;
+  opacity: 0;
+  transform: translateY(-0.55rem) scale(0.98);
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  pointer-events: auto;
+  backdrop-filter: blur(10px);
+}
+
+.notification-popup.is-visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.notification-popup:hover {
+  color: var(--text-strong);
+  box-shadow: var(--shadow-hover);
+}
+
+body .app-flash-popup.alert {
+  position: fixed;
+  top: 5.7rem;
+  left: 50%;
+  z-index: 1090;
+  width: min(24rem, calc(100vw - 1.5rem));
+  margin: 0;
+  border: 1px solid var(--input-border);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-card);
+  transform: translateX(-50%);
+  backdrop-filter: blur(10px);
+}
+
+body .app-flash-popup.alert.show {
+  display: block;
 }
 
 .notification-link {

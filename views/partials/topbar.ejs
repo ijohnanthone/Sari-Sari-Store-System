@@ -110,6 +110,7 @@
     </div>
   </div>
 </header>
+<div class="notification-popup-stack" id="notificationPopupStack" aria-live="polite" aria-atomic="false"></div>
 <button class="btn btn-success pos-cart-fab" type="button" id="globalCartToggleButton" aria-label="Open current cart">
   <i class="bi bi-cart3"></i>
   <span class="pos-cart-fab-count d-none" id="globalCartFabCount">0</span>
@@ -158,10 +159,14 @@
     const notificationCountBadge = document.getElementById("notificationCountBadge");
     const notificationSummary = document.getElementById("notificationSummary");
     const notificationMenu = document.getElementById("notificationMenu");
+    const notificationPopupStack = document.getElementById("notificationPopupStack");
     const salesCartStorageKey = "sales-cart-state";
     const salesCartOpenStorageKey = "sales-cart-open-on-load";
+    const notificationSeenStorageKey = "notification-popup-seen";
+    const initialNotifications = <%- JSON.stringify(notifications || []) %>;
     const currentPath = window.location.pathname;
     let notificationsRefreshInFlight = false;
+    let seenNotificationPopups = new Set();
 
     function escapeHtml(value) {
       return String(value ?? "")
@@ -170,6 +175,65 @@
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#39;");
+    }
+
+    function loadSeenNotificationPopups() {
+      try {
+        const parsed = JSON.parse(window.sessionStorage.getItem(notificationSeenStorageKey) || "[]");
+        seenNotificationPopups = new Set(Array.isArray(parsed) ? parsed : []);
+      } catch (error) {
+        seenNotificationPopups = new Set();
+      }
+    }
+
+    function saveSeenNotificationPopups() {
+      window.sessionStorage.setItem(notificationSeenStorageKey, JSON.stringify([...seenNotificationPopups].slice(-60)));
+    }
+
+    function getNotificationPopupKey(notification) {
+      return [notification.title, notification.message, notification.link || "", notification.tone || ""].join("|");
+    }
+
+    function hasActiveActionPopup() {
+      return Boolean(document.querySelector(".app-flash-popup.show, .app-flash-popup"));
+    }
+
+    function showNotificationPopups(notifications) {
+      if (!notificationPopupStack || !Array.isArray(notifications) || !notifications.length) return;
+      if (hasActiveActionPopup()) return;
+
+      notifications.forEach((notification, index) => {
+        const key = getNotificationPopupKey(notification);
+        if (seenNotificationPopups.has(key)) return;
+        seenNotificationPopups.add(key);
+
+        const popupTag = notification.link ? "a" : "div";
+        const popup = document.createElement(popupTag);
+        popup.className = "notification-popup notification-item";
+        if (notification.link) popup.href = notification.link;
+        popup.innerHTML = `
+          <div class="d-flex gap-3">
+            <div class="notification-icon text-${escapeHtml(notification.tone)}">
+              <i class="bi ${escapeHtml(notification.icon)}"></i>
+            </div>
+            <div class="min-w-0">
+              <div class="fw-semibold">${escapeHtml(notification.title)}</div>
+              <div class="mini-note">${escapeHtml(notification.message)}</div>
+            </div>
+          </div>
+        `;
+
+        window.setTimeout(() => {
+          notificationPopupStack.appendChild(popup);
+          window.setTimeout(() => popup.classList.add("is-visible"), 30);
+          window.setTimeout(() => {
+            popup.classList.remove("is-visible");
+            window.setTimeout(() => popup.remove(), 240);
+          }, 5000);
+        }, index * 120);
+      });
+
+      saveSeenNotificationPopups();
     }
 
     function renderNotifications(notifications) {
@@ -210,6 +274,8 @@
         "aria-label",
         notifications.length ? `Open notifications with ${notifications.length} active alert${notifications.length === 1 ? "" : "s"}` : "Open notifications"
       );
+
+      showNotificationPopups(notifications);
     }
 
     async function refreshNotifications() {
@@ -250,7 +316,20 @@
       globalCartToggleButton.setAttribute("aria-label", cartCount > 0 ? `Open current cart with ${cartCount} item${cartCount === 1 ? "" : "s"}` : "Open current cart");
     }
 
+    document.querySelectorAll("[data-auto-dismiss]").forEach((alertElement) => {
+      window.setTimeout(() => {
+        if (typeof bootstrap !== "undefined" && bootstrap.Alert) {
+          bootstrap.Alert.getOrCreateInstance(alertElement).close();
+          return;
+        }
+        alertElement.classList.remove("show");
+        window.setTimeout(() => alertElement.remove(), 180);
+      }, Number(alertElement.dataset.autoDismiss || 5000));
+    });
+
     syncCartBadge();
+    loadSeenNotificationPopups();
+    showNotificationPopups(initialNotifications);
     window.addEventListener("storage", syncCartBadge);
     window.addEventListener("sales-cart-updated", syncCartBadge);
 
