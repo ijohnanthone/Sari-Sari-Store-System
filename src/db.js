@@ -778,6 +778,23 @@ function seedDefaults() {
   }
 }
 
+function seedMissingInventoryItems() {
+  const existingNames = new Set(
+    db.prepare("SELECT name FROM inventory_items").all()
+      .map((row) => String(row.name || "").trim().toLowerCase())
+  );
+  const insertItem = db.prepare(`INSERT INTO inventory_items (name, category, supplier, stock_quantity, unit_price, selling_price, reorder_level) VALUES (?, ?, ?, ?, ?, ?, ?)`);
+  const missingItems = seedInventoryItems.filter((item) => !existingNames.has(String(item.name || "").trim().toLowerCase()));
+  if (!missingItems.length) return;
+
+  const insertMany = withTransaction((items) => {
+    for (const item of items) {
+      insertItem.run(item.name, item.category, item.supplier || "", item.stockQuantity, item.unitPrice, item.sellingPrice, item.reorderLevel);
+    }
+  });
+  insertMany(missingItems);
+}
+
 export function initializeDatabase() {
   createSchema();
   ensureUserSchema();
@@ -785,6 +802,7 @@ export function initializeDatabase() {
   ensureDigitalServiceRequestSchema();
   ensureStoreSettingsSchema();
   seedDefaults();
+  seedMissingInventoryItems();
   seedSuppliersFromInventory();
   seedCategoriesFromInventory();
   backfillLogTablesFromSales();

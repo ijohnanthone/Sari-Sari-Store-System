@@ -9,19 +9,29 @@
         <div class="eload-request-column">
           <div class="content-card p-4">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-              <div>
+              <div class="d-flex flex-wrap align-items-center gap-2">
                 <div class="section-title">Digital Service Requests</div>
-                <div class="mini-note">Any user or admin can create a pending Eload or GCash request, then complete it later with a full requester/completer audit trail.</div>
+                <button
+                  class="btn btn-sm btn-outline-secondary rounded-circle d-inline-flex align-items-center justify-content-center"
+                  type="button"
+                  style="width: 1.9rem; height: 1.9rem;"
+                  data-bs-toggle="tooltip"
+                  data-bs-placement="right"
+                  data-bs-title="Any user or admin can create a pending Eload or GCash request, then complete it later with a full requester/completer audit trail."
+                  aria-label="Item search guide"
+                >
+                  ?
+                </button>
               </div>
               <span class="badge rounded-pill text-bg-light border px-3 py-2"><%= requests.filter((entry) => entry.status === "Pending").length %> pending</span>
             </div>
 
             <div class="eload-service-grid mb-4" id="eloadServiceGrid">
-              <button type="button" class="eload-service-card is-selected" data-service="eload">
+              <button type="button" class="eload-service-card is-selected" data-service="eload" data-service-card="eload">
                 <span class="fw-semibold fs-5">Eload Request</span>
                 <span class="mini-note">Encode mobile number, network, and load option first, then complete the request later.</span>
               </button>
-              <button type="button" class="eload-service-card" data-service="gcash">
+              <button type="button" class="eload-service-card" data-service="gcash" data-service-card="gcash">
                 <span class="fw-semibold fs-5">GCash Request</span>
                 <span class="mini-note">Create cash-in or cash-out requests, then complete them once the transaction reference is ready.</span>
               </button>

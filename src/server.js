@@ -685,17 +685,13 @@ app.post("/inventory/:id/delete", requireAuth, requireAdmin, (req, res) => {
 });
 
 app.get("/sales", requireAuth, requireSalesAccess, (req, res) => {
-  const filter = req.query.filter || "all";
   res.render("sales", {
     pageTitle: "Sales",
     todayLabel: todayLabel(),
-    sales: listSales(filter),
-    filter,
     metrics: getSalesMetrics(),
     saleDateDefault: isoDateToday(),
     inventory: listInventory("").filter((item) => item.status !== "Out of Stock"),
-    formatCurrency,
-    formatLongDate
+    formatCurrency
   });
 });
 
