@@ -5,8 +5,8 @@
     <%- include("partials/topbar") %>
     <section class="p-3 p-lg-4">
       <%- include("partials/flash") %>
-      <div class="row g-4">
-        <div class="col-12">
+      <div class="eload-page-grid">
+        <div class="eload-request-column">
           <div class="content-card p-4">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
               <div>
@@ -207,7 +207,7 @@
           </div>
         </div>
 
-        <div class="col-12">
+        <div class="eload-pending-column">
           <div class="content-card p-4">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
               <div>
@@ -253,19 +253,19 @@
                       </div>
 
                     <div class="row g-3 mb-3">
-                      <div class="col-md-3">
+                      <div class="col-6">
                         <div class="mini-note">Request Type</div>
                         <div class="fw-semibold"><%= entry.service_type === "gcash" ? entry.request_kind : entry.load_type %></div>
                       </div>
-                      <div class="col-md-3">
+                      <div class="col-6">
                         <div class="mini-note"><%= entry.service_type === "gcash" ? "Reference" : "Network" %></div>
                         <div class="fw-semibold"><%= entry.service_type === "gcash" ? (entry.reference_no || "Pending") : entry.network %></div>
                       </div>
-                      <div class="col-md-3">
+                      <div class="col-6">
                         <div class="mini-note"><%= entry.service_type === "gcash" ? "Status" : "Load Value" %></div>
                         <div class="fw-semibold"><%= entry.service_type === "gcash" ? entry.status : entry.load_value %></div>
                       </div>
-                      <div class="col-md-3">
+                      <div class="col-6">
                         <div class="mini-note">Notes</div>
                         <div class="fw-semibold"><%= entry.notes || "-" %></div>
                       </div>
@@ -274,19 +274,19 @@
                     <form method="post" action="/eload/requests/<%= entry.id %>/complete" class="row g-3 align-items-end">
                       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                       <% if (entry.service_type === "gcash") { %>
-                        <div class="col-lg-5">
+                        <div class="col-12">
                           <label class="form-label">Reference Number</label>
                           <input class="form-control" name="referenceNumber" value="<%= entry.reference_no %>" placeholder="Required to complete GCash" required>
                         </div>
                       <% } else { %>
-                        <div class="col-lg-5">
+                        <div class="col-12">
                           <div class="mini-note">Completing this eload request will stamp who completed it and the exact date/time.</div>
                         </div>
                       <% } %>
-                      <div class="col-lg-3">
+                      <div class="col-12">
                         <button class="btn btn-success w-100">Mark as Completed</button>
                       </div>
-                      <div class="col-lg-3">
+                      <div class="col-12">
                         <button
                           class="btn btn-outline-danger w-100"
                           type="button"
