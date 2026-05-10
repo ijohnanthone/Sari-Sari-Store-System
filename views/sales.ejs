@@ -78,14 +78,14 @@
     </div>
 
     <div class="table-responsive pos-cart-table-wrap">
-      <table class="table align-middle mb-0">
+      <table class="table align-middle mb-0 pos-cart-table">
         <thead>
           <tr>
             <th>Item</th>
             <th class="text-end">Price</th>
-            <th style="width: 170px;">Qty</th>
+            <th>Qty</th>
             <th class="text-end">Total</th>
-            <th class="text-end">Action</th>
+            <th class="text-end"><span class="d-none d-sm-inline">Action</span></th>
           </tr>
         </thead>
         <tbody id="saleCartBody">
@@ -96,23 +96,23 @@
       </table>
     </div>
 
-    <div class="row g-3 mt-1">
-      <div class="col-md-4">
-        <div class="content-card p-3 h-100">
-          <div class="mini-note">Cart Items</div>
-          <div class="h3 mb-0" id="cartItemCount">0</div>
+    <div class="row g-3 mt-1 pos-cart-summary-grid">
+      <div class="col-4">
+        <div class="content-card p-3 h-100 pos-cart-summary-card">
+          <div class="mini-note pos-cart-summary-label">Cart Items</div>
+          <div class="h3 mb-0 pos-cart-summary-value" id="cartItemCount">0</div>
         </div>
       </div>
-      <div class="col-md-4">
-        <div class="content-card p-3 h-100">
-          <div class="mini-note">Total Quantity</div>
-          <div class="h3 mb-0" id="cartUnitCount">0</div>
+      <div class="col-4">
+        <div class="content-card p-3 h-100 pos-cart-summary-card">
+          <div class="mini-note pos-cart-summary-label">Total Quantity</div>
+          <div class="h3 mb-0 pos-cart-summary-value" id="cartUnitCount">0</div>
         </div>
       </div>
-      <div class="col-md-4">
-        <div class="content-card p-3 h-100">
-          <div class="mini-note">Grand Total</div>
-          <div class="h3 mb-0 text-success" id="saleGrandTotal">PHP 0.00</div>
+      <div class="col-4">
+        <div class="content-card p-3 h-100 pos-cart-summary-card">
+          <div class="mini-note pos-cart-summary-label">Grand Total</div>
+          <div class="h3 mb-0 text-success pos-cart-summary-value pos-cart-summary-money" id="saleGrandTotal">PHP 0.00</div>
         </div>
       </div>
     </div>
