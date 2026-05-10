@@ -226,7 +226,10 @@ function createSchema() {
       daily_sales_alert INTEGER NOT NULL DEFAULT 1,
       weekly_sales_alert INTEGER NOT NULL DEFAULT 0,
       theme TEXT NOT NULL DEFAULT 'Light Mode',
-      color_scheme TEXT NOT NULL DEFAULT 'Emerald'
+      color_scheme TEXT NOT NULL DEFAULT 'Emerald',
+      color_scheme_secondary TEXT NOT NULL DEFAULT 'None',
+      color_scheme_tertiary TEXT NOT NULL DEFAULT 'None',
+      font_size TEXT NOT NULL DEFAULT 'Normal'
     );
     CREATE TABLE IF NOT EXISTS suppliers (
       supplier_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -285,6 +288,21 @@ function ensureDigitalServiceRequestSchema() {
   }
   if (!columnNames.has("failed_at")) {
     db.exec("ALTER TABLE digital_service_requests ADD COLUMN failed_at TEXT");
+  }
+}
+
+function ensureStoreSettingsSchema() {
+  const columns = db.prepare("PRAGMA table_info(store_settings)").all();
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (!columnNames.has("color_scheme_secondary")) {
+    db.exec("ALTER TABLE store_settings ADD COLUMN color_scheme_secondary TEXT NOT NULL DEFAULT 'None'");
+  }
+  if (!columnNames.has("color_scheme_tertiary")) {
+    db.exec("ALTER TABLE store_settings ADD COLUMN color_scheme_tertiary TEXT NOT NULL DEFAULT 'None'");
+  }
+  if (!columnNames.has("font_size")) {
+    db.exec("ALTER TABLE store_settings ADD COLUMN font_size TEXT NOT NULL DEFAULT 'Normal'");
   }
 }
 
@@ -734,8 +752,8 @@ function seedDefaults() {
   if (!db.prepare("SELECT COUNT(*) AS count FROM store_settings").get().count) {
     db.prepare(`
       INSERT INTO store_settings
-      (id, store_name, store_address, contact_number, tax_id, operating_hours, low_stock_alert, out_of_stock_alert, daily_sales_alert, weekly_sales_alert, theme, color_scheme)
-      VALUES (1, ?, ?, ?, ?, ?, 1, 1, 1, 0, 'Light Mode', 'Emerald')
+      (id, store_name, store_address, contact_number, tax_id, operating_hours, low_stock_alert, out_of_stock_alert, daily_sales_alert, weekly_sales_alert, theme, color_scheme, color_scheme_secondary, color_scheme_tertiary, font_size)
+      VALUES (1, ?, ?, ?, ?, ?, 1, 1, 1, 0, 'Light Mode', 'Emerald', 'None', 'None', 'Normal')
     `).run("Sari-Sari Store", "123 Barangay Street, City, Province", "+63 912 345 6789", "", "Monday - Sunday, 6:00 AM - 10:00 PM");
   }
 
@@ -760,12 +778,31 @@ function seedDefaults() {
   }
 }
 
+function seedMissingInventoryItems() {
+  const existingNames = new Set(
+    db.prepare("SELECT name FROM inventory_items").all()
+      .map((row) => String(row.name || "").trim().toLowerCase())
+  );
+  const insertItem = db.prepare(`INSERT INTO inventory_items (name, category, supplier, stock_quantity, unit_price, selling_price, reorder_level) VALUES (?, ?, ?, ?, ?, ?, ?)`);
+  const missingItems = seedInventoryItems.filter((item) => !existingNames.has(String(item.name || "").trim().toLowerCase()));
+  if (!missingItems.length) return;
+
+  const insertMany = withTransaction((items) => {
+    for (const item of items) {
+      insertItem.run(item.name, item.category, item.supplier || "", item.stockQuantity, item.unitPrice, item.sellingPrice, item.reorderLevel);
+    }
+  });
+  insertMany(missingItems);
+}
+
 export function initializeDatabase() {
   createSchema();
   ensureUserSchema();
   ensureInventorySchema();
   ensureDigitalServiceRequestSchema();
+  ensureStoreSettingsSchema();
   seedDefaults();
+  seedMissingInventoryItems();
   seedSuppliersFromInventory();
   seedCategoriesFromInventory();
   backfillLogTablesFromSales();
@@ -948,7 +985,8 @@ export function updateNotifications(input) {
 }
 
 export function updateAppearance(input) {
-  db.prepare(`UPDATE store_settings SET theme = ?, color_scheme = ? WHERE id = 1`).run(input.theme, input.colorScheme);
+  db.prepare(`UPDATE store_settings SET theme = ?, color_scheme = ?, color_scheme_secondary = ?, color_scheme_tertiary = ?, font_size = ? WHERE id = 1`)
+    .run(input.theme, input.colorScheme, input.colorSchemeSecondary, input.colorSchemeTertiary, input.fontSize);
 }
 
 export function listInventory(search = "", status = "all") {

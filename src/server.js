@@ -171,7 +171,24 @@ function normalizeColorScheme(value) {
   const normalized = String(value || "").trim().toLowerCase();
   if (normalized === "blue") return "Blue";
   if (normalized === "amber") return "Amber";
+  if (normalized === "violet") return "Violet";
+  if (normalized === "ocean") return "Ocean";
+  if (normalized === "rose") return "Rose";
   return "Emerald";
+}
+
+function normalizeOptionalColorScheme(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "none" || normalized === "") return "None";
+  return normalizeColorScheme(value);
+}
+
+function normalizeFontSize(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "small") return "Small";
+  if (normalized === "large") return "Large";
+  if (normalized === "extra large" || normalized === "extra-large" || normalized === "x-large") return "Extra Large";
+  return "Normal";
 }
 
 function sendNoStore(res) {
@@ -216,7 +233,10 @@ app.use((req, res, next) => {
   res.locals.flash = req.session.flash || null;
   res.locals.appearance = {
     theme: normalizeTheme(storeSettings.theme),
-    colorScheme: normalizeColorScheme(storeSettings.color_scheme)
+    colorScheme: normalizeColorScheme(storeSettings.color_scheme),
+    colorSchemeSecondary: normalizeOptionalColorScheme(storeSettings.color_scheme_secondary),
+    colorSchemeTertiary: normalizeOptionalColorScheme(storeSettings.color_scheme_tertiary),
+    fontSize: normalizeFontSize(storeSettings.font_size)
   };
   delete req.session.flash;
   if (req.session.user) sendNoStore(res);
@@ -665,17 +685,13 @@ app.post("/inventory/:id/delete", requireAuth, requireAdmin, (req, res) => {
 });
 
 app.get("/sales", requireAuth, requireSalesAccess, (req, res) => {
-  const filter = req.query.filter || "all";
   res.render("sales", {
     pageTitle: "Sales",
     todayLabel: todayLabel(),
-    sales: listSales(filter),
-    filter,
     metrics: getSalesMetrics(),
     saleDateDefault: isoDateToday(),
     inventory: listInventory("").filter((item) => item.status !== "Out of Stock"),
-    formatCurrency,
-    formatLongDate
+    formatCurrency
   });
 });
 
@@ -924,10 +940,13 @@ app.post("/settings/notifications", requireAuth, requireAdmin, (req, res) => {
 app.post("/settings/appearance", requireAuth, (req, res) => {
   updateAppearance({
     theme: normalizeTheme(req.body.theme),
-    colorScheme: normalizeColorScheme(req.body.colorScheme)
+    colorScheme: normalizeColorScheme(req.body.colorScheme),
+    colorSchemeSecondary: normalizeOptionalColorScheme(req.body.colorSchemeSecondary),
+    colorSchemeTertiary: normalizeOptionalColorScheme(req.body.colorSchemeTertiary),
+    fontSize: normalizeFontSize(req.body.fontSize)
   });
   setFlash(req, "success", "Appearance preferences saved.");
-  res.redirect("/settings");
+  res.redirect("/settings?tab=appearance");
 });
 
 app.post("/settings/categories/add", requireAuth, requireAdmin, (req, res) => {

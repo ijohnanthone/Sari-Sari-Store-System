@@ -16,11 +16,6 @@
       <a class="nav-link <%= currentPath.startsWith('/inventory') ? 'active' : '' %>" href="/inventory"><i class="bi bi-box-seam"></i>Inventory</a>
       <a class="nav-link <%= currentPath.startsWith('/eload') ? 'active' : '' %>" href="/eload"><i class="bi bi-phone"></i>Eload</a>
       <a class="nav-link <%= currentPath.startsWith('/sales') ? 'active' : '' %>" href="/sales"><i class="bi bi-cart3"></i>Sales</a>
-      <% if (user && user.role === "Admin") { %>
-        <a class="nav-link <%= currentPath.startsWith('/logs') ? 'active' : '' %>" href="/logs"><i class="bi bi-journal-text"></i>Logs</a>
-        <a class="nav-link <%= currentPath.startsWith('/reports') ? 'active' : '' %>" href="/reports"><i class="bi bi-bar-chart-line"></i>Reports</a>
-        <a class="nav-link <%= currentPath.startsWith('/users') ? 'active' : '' %>" href="/users"><i class="bi bi-people"></i>User Accounts</a>
-      <% } %>
     </nav>
     <div class="mt-auto pt-4 d-lg-none">
       <div class="content-card p-3">
