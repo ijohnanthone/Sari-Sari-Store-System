@@ -146,8 +146,36 @@
                 </div>
               </div>
             </div>
+            <div class="content-card p-4">
+              <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div>
+                  <div class="section-title">Scale</div>
+                  <div class="mini-note">Change the size of text, apps, and other items.</div>
+                </div>
+                <div class="settings-scale-value" id="scaleValue"><%= appearance.scale %>%</div>
+              </div>
+              <div class="settings-scale-control mt-3">
+                <label class="form-label visually-hidden" for="scaleRange">Scale</label>
+                <input class="form-range" type="range" id="scaleRange" name="scale" min="10" max="200" step="10" value="<%= appearance.scale %>">
+                <div class="settings-scale-ticks" aria-hidden="true">
+                  <span>10%</span>
+                  <span>100%</span>
+                  <span>200%</span>
+                </div>
+              </div>
+            </div>
             <div><button class="btn btn-success">Save Appearance</button></div>
           </form>
+          <script>
+            (() => {
+              const scaleRange = document.getElementById("scaleRange");
+              const scaleValue = document.getElementById("scaleValue");
+              if (!scaleRange || !scaleValue) return;
+              scaleRange.addEventListener("input", () => {
+                scaleValue.textContent = `${scaleRange.value}%`;
+              });
+            })();
+          </script>
         </div>
         <% if (user && user.role === "Admin") { %>
         <div class="tab-pane fade <%= activeTab === 'categories' ? 'show active' : '' %>" id="categories-tab">

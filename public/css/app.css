@@ -74,6 +74,31 @@ body[data-font-size="Normal"] { font-size: 1rem; }
 body[data-font-size="Large"] { font-size: 1.08rem; }
 body[data-font-size="Extra Large"] { font-size: 1.16rem; }
 
+body[data-scale] {
+  zoom: var(--appearance-scale, 1);
+}
+
+body[data-scale="10"] { --appearance-scale: 0.1; }
+body[data-scale="20"] { --appearance-scale: 0.2; }
+body[data-scale="30"] { --appearance-scale: 0.3; }
+body[data-scale="40"] { --appearance-scale: 0.4; }
+body[data-scale="50"] { --appearance-scale: 0.5; }
+body[data-scale="60"] { --appearance-scale: 0.6; }
+body[data-scale="70"] { --appearance-scale: 0.7; }
+body[data-scale="80"] { --appearance-scale: 0.8; }
+body[data-scale="90"] { --appearance-scale: 0.9; }
+body[data-scale="100"] { --appearance-scale: 1; }
+body[data-scale="110"] { --appearance-scale: 1.1; }
+body[data-scale="120"] { --appearance-scale: 1.2; }
+body[data-scale="130"] { --appearance-scale: 1.3; }
+body[data-scale="140"] { --appearance-scale: 1.4; }
+body[data-scale="150"] { --appearance-scale: 1.5; }
+body[data-scale="160"] { --appearance-scale: 1.6; }
+body[data-scale="170"] { --appearance-scale: 1.7; }
+body[data-scale="180"] { --appearance-scale: 1.8; }
+body[data-scale="190"] { --appearance-scale: 1.9; }
+body[data-scale="200"] { --appearance-scale: 2; }
+
 body[data-font-size] .btn,
 body[data-font-size] .form-control,
 body[data-font-size] .form-select,
@@ -1429,6 +1454,32 @@ body[data-font-size] .mini-note { font-size: 0.85em; }
 
 .settings-font-size-control {
   width: min(100%, 14rem);
+}
+
+.settings-scale-value {
+  min-width: 5rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--input-border);
+  border-radius: 0.5rem;
+  background: var(--input-bg);
+  color: var(--text-strong);
+  font-weight: 700;
+  text-align: center;
+}
+
+.settings-scale-control {
+  max-width: 38rem;
+}
+
+.settings-scale-control .form-range {
+  accent-color: var(--brand-emerald);
+}
+
+.settings-scale-ticks {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-muted);
+  font-size: 0.8rem;
 }
 
 .settings-theme-grid {

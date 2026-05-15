@@ -193,6 +193,12 @@ function normalizeFontSize(value) {
   return "Normal";
 }
 
+function normalizeScale(value) {
+  const numeric = Number.parseInt(String(value || "").replace("%", ""), 10);
+  if (!Number.isFinite(numeric)) return 100;
+  return Math.min(200, Math.max(10, Math.round(numeric / 10) * 10));
+}
+
 function sendNoStore(res) {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
   res.setHeader("Pragma", "no-cache");
@@ -238,7 +244,8 @@ app.use((req, res, next) => {
     colorScheme: normalizeColorScheme(storeSettings.color_scheme),
     colorSchemeSecondary: normalizeOptionalColorScheme(storeSettings.color_scheme_secondary),
     colorSchemeTertiary: normalizeOptionalColorScheme(storeSettings.color_scheme_tertiary),
-    fontSize: normalizeFontSize(storeSettings.font_size)
+    fontSize: normalizeFontSize(storeSettings.font_size),
+    scale: normalizeScale(storeSettings.appearance_scale)
   };
   delete req.session.flash;
   if (req.session.user) sendNoStore(res);
@@ -945,7 +952,8 @@ app.post("/settings/appearance", requireAuth, (req, res) => {
     colorScheme: normalizeColorScheme(req.body.colorScheme),
     colorSchemeSecondary: normalizeOptionalColorScheme(req.body.colorSchemeSecondary),
     colorSchemeTertiary: normalizeOptionalColorScheme(req.body.colorSchemeTertiary),
-    fontSize: normalizeFontSize(req.body.fontSize)
+    fontSize: normalizeFontSize(req.body.fontSize),
+    scale: normalizeScale(req.body.scale)
   });
   setFlash(req, "success", "Appearance preferences saved.");
   res.redirect("/settings?tab=appearance");
