@@ -8,4 +8,27 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <link href="/css/app.css" rel="stylesheet">
 </head>
-<body data-theme="<%= appearance.theme %>" data-color-scheme="<%= appearance.colorScheme %>" data-color-scheme-secondary="<%= appearance.colorSchemeSecondary %>" data-color-scheme-tertiary="<%= appearance.colorSchemeTertiary %>" data-font-size="<%= appearance.fontSize %>" data-scale="<%= appearance.scale %>">
+<body data-theme="<%= appearance.theme %>" data-color-scheme="<%= appearance.colorScheme %>" data-font-size="<%= appearance.fontSize %>" data-scale="<%= appearance.scale %>" data-appearance-key="sari-sari-appearance:<%= user ? user.id : 'guest' %>">
+<script>
+  (() => {
+    const allowedThemes = new Set(["Light Mode", "Dark Mode"]);
+    const allowedSchemes = new Set(["Emerald", "Blue", "Amber", "Violet", "Ocean", "Rose"]);
+    const allowedFontSizes = new Set(["Small", "Normal", "Large", "Extra Large"]);
+    const normalizeScale = (value) => {
+      const numeric = Number.parseInt(String(value || "").replace("%", ""), 10);
+      if (!Number.isFinite(numeric)) return "100";
+      return String(Math.min(200, Math.max(10, Math.round(numeric / 10) * 10)));
+    };
+    try {
+      const key = document.body.dataset.appearanceKey;
+      const saved = key ? JSON.parse(window.localStorage.getItem(key) || "null") : null;
+      if (!saved || typeof saved !== "object") return;
+      document.body.dataset.theme = allowedThemes.has(saved.theme) ? saved.theme : "Light Mode";
+      document.body.dataset.colorScheme = allowedSchemes.has(saved.colorScheme) ? saved.colorScheme : "Emerald";
+      document.body.dataset.fontSize = allowedFontSizes.has(saved.fontSize) ? saved.fontSize : "Normal";
+      document.body.dataset.scale = normalizeScale(saved.scale);
+    } catch (error) {
+      console.warn("Unable to apply browser appearance settings.", error);
+    }
+  })();
+</script>

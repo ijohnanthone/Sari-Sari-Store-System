@@ -224,13 +224,7 @@ function createSchema() {
       low_stock_alert INTEGER NOT NULL DEFAULT 1,
       out_of_stock_alert INTEGER NOT NULL DEFAULT 1,
       daily_sales_alert INTEGER NOT NULL DEFAULT 1,
-      weekly_sales_alert INTEGER NOT NULL DEFAULT 0,
-      theme TEXT NOT NULL DEFAULT 'Light Mode',
-      color_scheme TEXT NOT NULL DEFAULT 'Emerald',
-      color_scheme_secondary TEXT NOT NULL DEFAULT 'None',
-      color_scheme_tertiary TEXT NOT NULL DEFAULT 'None',
-      font_size TEXT NOT NULL DEFAULT 'Normal',
-      appearance_scale INTEGER NOT NULL DEFAULT 100
+      weekly_sales_alert INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS suppliers (
       supplier_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -289,24 +283,6 @@ function ensureDigitalServiceRequestSchema() {
   }
   if (!columnNames.has("failed_at")) {
     db.exec("ALTER TABLE digital_service_requests ADD COLUMN failed_at TEXT");
-  }
-}
-
-function ensureStoreSettingsSchema() {
-  const columns = db.prepare("PRAGMA table_info(store_settings)").all();
-  const columnNames = new Set(columns.map((column) => column.name));
-
-  if (!columnNames.has("color_scheme_secondary")) {
-    db.exec("ALTER TABLE store_settings ADD COLUMN color_scheme_secondary TEXT NOT NULL DEFAULT 'None'");
-  }
-  if (!columnNames.has("color_scheme_tertiary")) {
-    db.exec("ALTER TABLE store_settings ADD COLUMN color_scheme_tertiary TEXT NOT NULL DEFAULT 'None'");
-  }
-  if (!columnNames.has("font_size")) {
-    db.exec("ALTER TABLE store_settings ADD COLUMN font_size TEXT NOT NULL DEFAULT 'Normal'");
-  }
-  if (!columnNames.has("appearance_scale")) {
-    db.exec("ALTER TABLE store_settings ADD COLUMN appearance_scale INTEGER NOT NULL DEFAULT 100");
   }
 }
 
@@ -792,8 +768,8 @@ function seedDefaults() {
   if (!db.prepare("SELECT COUNT(*) AS count FROM store_settings").get().count) {
     db.prepare(`
       INSERT INTO store_settings
-      (id, store_name, store_address, contact_number, tax_id, operating_hours, low_stock_alert, out_of_stock_alert, daily_sales_alert, weekly_sales_alert, theme, color_scheme, color_scheme_secondary, color_scheme_tertiary, font_size, appearance_scale)
-      VALUES (1, ?, ?, ?, ?, ?, 1, 1, 1, 0, 'Light Mode', 'Emerald', 'None', 'None', 'Normal', 100)
+      (id, store_name, store_address, contact_number, tax_id, operating_hours, low_stock_alert, out_of_stock_alert, daily_sales_alert, weekly_sales_alert)
+      VALUES (1, ?, ?, ?, ?, ?, 1, 1, 1, 0)
     `).run("Sari-Sari Store", "123 Barangay Street, City, Province", "+63 912 345 6789", "", "Monday - Sunday, 6:00 AM - 10:00 PM");
   }
 
@@ -840,7 +816,6 @@ export function initializeDatabase() {
   ensureUserSchema();
   ensureInventorySchema();
   ensureDigitalServiceRequestSchema();
-  ensureStoreSettingsSchema();
   seedDefaults();
   seedMissingInventoryItems();
   seedSuppliersFromInventory();
@@ -1022,11 +997,6 @@ export function updatePassword(userId, newPassword) {
 export function updateNotifications(input) {
   db.prepare(`UPDATE store_settings SET low_stock_alert = ?, out_of_stock_alert = ?, daily_sales_alert = ?, weekly_sales_alert = ? WHERE id = 1`)
     .run(input.lowStockAlert ? 1 : 0, input.outOfStockAlert ? 1 : 0, input.dailySalesAlert ? 1 : 0, input.weeklySalesAlert ? 1 : 0);
-}
-
-export function updateAppearance(input) {
-  db.prepare(`UPDATE store_settings SET theme = ?, color_scheme = ?, color_scheme_secondary = ?, color_scheme_tertiary = ?, font_size = ?, appearance_scale = ? WHERE id = 1`)
-    .run(input.theme, input.colorScheme, input.colorSchemeSecondary, input.colorSchemeTertiary, input.fontSize, input.scale);
 }
 
 export function listInventory(search = "", status = "all") {

@@ -12,13 +12,14 @@
               <div class="d-flex flex-wrap align-items-center gap-2">
                 <div class="section-title">Digital Service Requests</div>
                 <button
-                  class="btn btn-sm btn-outline-secondary rounded-circle d-inline-flex align-items-center justify-content-center"
+                  class="btn btn-sm eload-btn-ghost rounded-circle d-inline-flex align-items-center justify-content-center"
                   type="button"
-                  style="width: 1.9rem; height: 1.9rem;"
+                  style="width: 1.5rem; height: 1.5rem;"
                   data-bs-toggle="tooltip"
+                  data-bs-trigger="focus"
                   data-bs-placement="right"
                   data-bs-title="Any user or admin can create a pending Eload or GCash request, then complete it later with a full requester/completer audit trail."
-                  aria-label="Item search guide"
+                  aria-label="Digital service request guide"
                 >
                   ?
                 </button>
@@ -26,15 +27,24 @@
               <span class="badge rounded-pill text-bg-light border px-3 py-2"><%= requests.filter((entry) => entry.status === "Pending").length %> pending</span>
             </div>
 
-            <div class="eload-service-grid mb-4" id="eloadServiceGrid">
-              <button type="button" class="eload-service-card is-selected" data-service="eload" data-service-card="eload">
-                <span class="fw-semibold fs-5">Eload Request</span>
-                <span class="mini-note">Encode mobile number, network, and load option first, then complete the request later.</span>
-              </button>
-              <button type="button" class="eload-service-card" data-service="gcash" data-service-card="gcash">
-                <span class="fw-semibold fs-5">GCash Request</span>
-                <span class="mini-note">Create cash-in or cash-out requests, then complete them once the transaction reference is ready.</span>
-              </button>
+            <div class="eload-step mb-4">
+              <div class="eload-step-header">
+                <span class="eload-step-number">1</span>
+                <div>
+                  <div class="eload-step-title">Request Type</div>
+                  <div class="mini-note">Choose the digital service request to create.</div>
+                </div>
+              </div>
+              <div class="eload-service-grid" id="eloadServiceGrid">
+                <button type="button" class="eload-service-card is-selected" data-service="eload" data-service-card="eload">
+                  <span class="fw-semibold fs-5">Eload Request</span>
+                  <span class="mini-note">Encode mobile number, network, and load option first, then complete the request later.</span>
+                </button>
+                <button type="button" class="eload-service-card" data-service="gcash" data-service-card="gcash">
+                  <span class="fw-semibold fs-5">GCash Request</span>
+                  <span class="mini-note">Create cash-in or cash-out requests, then complete them once the transaction reference is ready.</span>
+                </button>
+              </div>
             </div>
 
             <div id="eloadFlowCard">
@@ -46,101 +56,157 @@
                 <input type="hidden" name="amount" id="eloadAmountValue">
 
                 <div class="col-12">
-                  <label class="form-label" for="eloadMobileNumber">Mobile Number</label>
-                  <input class="form-control form-control-lg" id="eloadMobileNumber" name="mobileNumber" inputmode="numeric" maxlength="13" placeholder="09XX XXX XXXX" required>
-                  <div class="mini-note mt-2">Accepted format: 11-digit Philippine mobile number starting with `09`.</div>
-                </div>
-
-                <div class="col-12">
-                  <div class="d-flex justify-content-between align-items-center mb-3">
-                    <label class="form-label mb-0">Choose Network</label>
-                    <div class="mini-note" id="eloadSelectedNetworkText">No network selected yet</div>
-                  </div>
-                  <div class="eload-network-grid" id="eloadNetworkGrid"></div>
-                </div>
-
-                <div class="col-12">
-                  <div class="d-flex flex-wrap gap-2 mb-3">
-                    <input class="btn-check" type="radio" name="loadType" id="eloadTypePromo" value="promo" checked>
-                    <label class="btn btn-outline-secondary rounded-pill px-4" for="eloadTypePromo">Promo Load</label>
-
-                    <input class="btn-check" type="radio" name="loadType" id="eloadTypeRegular" value="regular">
-                    <label class="btn btn-outline-secondary rounded-pill px-4" for="eloadTypeRegular">Regular Load</label>
-
-                    <input class="btn-check" type="radio" name="loadType" id="eloadTypeGcash" value="gcash">
-                    <label class="btn btn-outline-secondary rounded-pill px-4" for="eloadTypeGcash">GCash Exclusive</label>
-                  </div>
-
-                  <div class="row g-4">
-                    <div class="col-lg-7" id="eloadPromoSection">
-                      <label class="form-label" for="eloadPromoSelect">Promo Option</label>
-                      <select class="form-select" id="eloadPromoSelect"></select>
-                      <div class="mini-note mt-2" id="eloadPromoHelp">Choose a network first to see available promos.</div>
-                    </div>
-
-                    <div class="col-lg-5 d-none" id="eloadRegularSection">
-                      <label class="form-label" for="eloadRegularAmount">Regular Amount</label>
-                      <div class="input-group">
-                        <span class="input-group-text">PHP</span>
-                        <input class="form-control" id="eloadRegularAmount" type="number" min="1" step="1" placeholder="50">
-                      </div>
-                      <div class="mini-note mt-2">Enter any whole-number load amount.</div>
-                    </div>
-
-                    <div class="col-lg-7 d-none" id="eloadGcashSection">
-                      <label class="form-label" for="eloadGcashSelect">GCash Exclusive Option</label>
-                      <select class="form-select" id="eloadGcashSelect">
-                        <option value="GCash Exclusive 50">GCash Exclusive 50</option>
-                        <option value="GCash Exclusive 99">GCash Exclusive 99</option>
-                        <option value="GCash Exclusive 150">GCash Exclusive 150</option>
-                        <option value="GCash Exclusive 299">GCash Exclusive 299</option>
-                      </select>
-                      <div class="mini-note mt-2">Special GCash-only offers for digital wallet load purchases.</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="col-12">
-                  <label class="form-label" for="eloadNotes">Request Notes</label>
-                  <textarea class="form-control" id="eloadNotes" name="notes" rows="2" placeholder="Optional notes for the staff who will complete this request."></textarea>
-                </div>
-
-                <div class="col-12">
-                  <div class="eload-preview p-4 rounded-4">
-                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                  <div class="eload-step">
+                    <div class="eload-step-header">
+                      <span class="eload-step-number">2</span>
                       <div>
-                        <div class="mini-note">Request Preview</div>
-                        <div class="h4 mb-1" id="eloadPreviewTitle">Ready to create eload request</div>
-                        <div class="mini-note" id="eloadPreviewSubtitle">Complete the fields to preview the selected load request.</div>
+                        <div class="eload-step-title">Mobile Number</div>
+                        <div class="mini-note">Enter the customer number for the request.</div>
                       </div>
-                      <div class="badge rounded-pill text-bg-success px-3 py-2" id="eloadPreviewMode">Promo</div>
                     </div>
-                    <div class="row g-3 mt-1">
-                      <div class="col-md-3">
-                        <div class="mini-note">Number</div>
-                        <div class="fw-semibold" id="eloadPreviewNumber">09XX XXX XXXX</div>
+                    <label class="form-label" for="eloadMobileNumber">Mobile Number</label>
+                    <button
+                      class="btn btn-sm eload-btn-ghost rounded-circle d-inline-flex align-items-center justify-content-center"
+                      type="button"
+                      style="width: 1.5rem; height: 1.5rem;"
+                      data-bs-toggle="tooltip"
+                      data-bs-trigger="focus"
+                      data-bs-placement="right"
+                      data-bs-title="Accepted format: 11-digit Philippine mobile number starting with `09`"
+                      aria-label="Mobile number format guide"
+                    >
+                      ?
+                    </button>
+                    <input class="form-control form-control-lg" id="eloadMobileNumber" name="mobileNumber" inputmode="numeric" maxlength="13" placeholder="09XX XXX XXXX" required>
+                  </div>
+                </div>
+
+                <div class="col-12">
+                  <div class="eload-step">
+                    <div class="eload-step-header">
+                      <span class="eload-step-number">3</span>
+                      <div>
+                        <div class="eload-step-title">Network Selection</div>
+                        <div class="mini-note">Pick the network before choosing a promo.</div>
                       </div>
-                      <div class="col-md-3">
-                        <div class="mini-note">Network</div>
-                        <div class="fw-semibold" id="eloadPreviewNetwork">Select network</div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                      <label class="form-label mb-0">Choose Network</label>
+                      <div class="mini-note" id="eloadSelectedNetworkText">No network selected yet</div>
+                    </div>
+                    <div class="eload-network-grid" id="eloadNetworkGrid"></div>
+                  </div>
+                </div>
+
+                <div class="col-12">
+                  <div class="eload-step">
+                    <div class="eload-step-header">
+                      <span class="eload-step-number">4</span>
+                      <div>
+                        <div class="eload-step-title">Load Type + Promo</div>
+                        <div class="mini-note">Select the load type, promo, and optional request notes.</div>
                       </div>
-                      <div class="col-md-3">
-                        <div class="mini-note">Selected Load</div>
-                        <div class="fw-semibold" id="eloadPreviewValue">Choose an option</div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                      <input class="btn-check" type="radio" name="loadType" id="eloadTypePromo" value="promo" checked>
+                      <label class="btn eload-btn-ghost rounded-pill px-4" for="eloadTypePromo">Promo Load</label>
+
+                      <input class="btn-check" type="radio" name="loadType" id="eloadTypeRegular" value="regular">
+                      <label class="btn eload-btn-ghost rounded-pill px-4" for="eloadTypeRegular">Regular Load</label>
+
+                      <input class="btn-check" type="radio" name="loadType" id="eloadTypeGcash" value="gcash">
+                      <label class="btn eload-btn-ghost rounded-pill px-4" for="eloadTypeGcash">GCash Exclusive</label>
+                    </div>
+
+                    <div class="row g-4">
+                      <div class="col-lg-7" id="eloadPromoSection">
+                        <label class="form-label" for="eloadPromoSelect">Promo Option</label>
+                        <select class="form-select" id="eloadPromoSelect"></select>
+                        <div class="mini-note mt-2" id="eloadPromoHelp">Choose a network first to see available promos.</div>
                       </div>
-                      <div class="col-md-3">
-                        <div class="mini-note">Amount</div>
-                        <div class="fw-semibold" id="eloadPreviewAmount">PHP 0.00</div>
+
+                      <div class="col-lg-5 d-none" id="eloadRegularSection">
+                        <label class="form-label" for="eloadRegularAmount">Regular Amount</label>
+                        <div class="input-group">
+                          <span class="input-group-text">PHP</span>
+                          <input class="form-control" id="eloadRegularAmount" type="number" min="1" step="1" placeholder="50">
+                        </div>
+                        <div class="mini-note mt-2">Enter any whole-number load amount.</div>
+                      </div>
+
+                      <div class="col-lg-7 d-none" id="eloadGcashSection">
+                        <label class="form-label" for="eloadGcashSelect">GCash Exclusive Option</label>
+                        <select class="form-select" id="eloadGcashSelect">
+                          <option value="GCash Exclusive 50">GCash Exclusive 50</option>
+                          <option value="GCash Exclusive 99">GCash Exclusive 99</option>
+                          <option value="GCash Exclusive 150">GCash Exclusive 150</option>
+                          <option value="GCash Exclusive 299">GCash Exclusive 299</option>
+                        </select>
+                        <div class="mini-note mt-2">Special GCash-only offers for digital wallet load purchases.</div>
+                      </div>
+                    </div>
+
+                    <div class="mt-4">
+                      <label class="form-label" for="eloadNotes">Request Notes</label>
+                      <textarea class="form-control" id="eloadNotes" name="notes" rows="2" placeholder="Optional notes for the staff who will complete this request."></textarea>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-12">
+                  <div class="eload-step">
+                    <div class="eload-step-header">
+                      <span class="eload-step-number">5</span>
+                      <div>
+                        <div class="eload-step-title">Preview Card</div>
+                        <div class="mini-note">Review the request before saving it.</div>
+                      </div>
+                    </div>
+                    <div class="eload-preview p-4 rounded-4">
+                      <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                        <div>
+                          <div class="mini-note">Request Preview</div>
+                          <div class="h4 mb-1" id="eloadPreviewTitle">Ready to create eload request</div>
+                          <div class="mini-note" id="eloadPreviewSubtitle">Complete the fields to preview the selected load request.</div>
+                        </div>
+                        <div class="badge rounded-pill text-bg-success px-3 py-2" id="eloadPreviewMode">Promo</div>
+                      </div>
+                      <div class="row g-3 mt-1">
+                        <div class="col-md-3">
+                          <div class="mini-note">Number</div>
+                          <div class="fw-semibold" id="eloadPreviewNumber">09XX XXX XXXX</div>
+                        </div>
+                        <div class="col-md-3">
+                          <div class="mini-note">Network</div>
+                          <div class="fw-semibold" id="eloadPreviewNetwork">Select network</div>
+                        </div>
+                        <div class="col-md-3">
+                          <div class="mini-note">Selected Load</div>
+                          <div class="fw-semibold" id="eloadPreviewValue">Choose an option</div>
+                        </div>
+                        <div class="col-md-3">
+                          <div class="mini-note">Amount</div>
+                          <div class="fw-semibold" id="eloadPreviewAmount">PHP 0.00</div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 <div class="col-12">
-                  <div id="eloadActionAlert"></div>
-                  <div class="d-flex flex-wrap gap-2">
-                    <button class="btn btn-success px-4" type="submit">Create Eload Request</button>
-                    <button class="btn btn-outline-success px-4" type="button" id="eloadAddToCartButton">Add to Cart</button>
+                  <div class="eload-step">
+                    <div class="eload-step-header">
+                      <span class="eload-step-number">6</span>
+                      <div>
+                        <div class="eload-step-title">CTA Buttons</div>
+                        <div class="mini-note">Create a pending request or send it to the sales cart.</div>
+                      </div>
+                    </div>
+                    <div id="eloadActionAlert"></div>
+                    <div class="d-flex flex-wrap gap-2">
+                      <button class="btn eload-btn-primary px-4" type="submit">Create Eload Request</button>
+                      <button class="btn eload-btn-secondary px-4" type="button" id="eloadAddToCartButton">Add to Cart</button>
+                    </div>
                   </div>
                 </div>
               </form>
@@ -148,68 +214,110 @@
 
             <div id="gcashFlowCard" class="d-none">
               <div class="content-card border-0 shadow-none p-0">
-                <div class="section-title mb-2">GCash Request</div>
-                <div class="mini-note mb-4">Create the request first. When the payment or reference is ready, complete it from the pending queue below.</div>
-
                 <form id="gcashForm" class="row g-4" method="post" action="/eload/requests" autocomplete="off">
                   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                   <input type="hidden" name="serviceType" value="gcash">
 
-                  <div class="col-md-6">
-                    <label class="form-label" for="gcashMobileNumber">GCash Number</label>
-                    <input class="form-control form-control-lg" id="gcashMobileNumber" name="mobileNumber" inputmode="numeric" maxlength="13" placeholder="09XX XXX XXXX" required>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label" for="gcashReferenceNumber">Reference Number</label>
-                    <input class="form-control form-control-lg" id="gcashReferenceNumber" name="referenceNumber" placeholder="Optional when creating, required when completing">
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label" for="gcashCashFlow">Cash Flow</label>
-                    <select class="form-select form-select-lg" id="gcashCashFlow" name="cashFlow">
-                      <option value="Cash In">Cash In</option>
-                      <option value="Cash Out">Cash Out</option>
-                    </select>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label" for="gcashAmount">Amount</label>
-                    <div class="input-group input-group-lg">
-                      <span class="input-group-text">PHP</span>
-                      <input class="form-control" id="gcashAmount" name="amount" type="number" min="1" step="1" placeholder="100" required>
-                    </div>
-                  </div>
                   <div class="col-12">
-                    <label class="form-label" for="gcashNotes">Request Notes</label>
-                    <textarea class="form-control" id="gcashNotes" name="notes" rows="2" placeholder="Optional reminder or instruction for the completing staff."></textarea>
-                  </div>
-
-                  <div class="col-12">
-                    <div class="eload-preview p-4 rounded-4">
-                      <div class="mini-note">GCash Request Preview</div>
-                      <div class="h4 mb-1" id="gcashPreviewTitle">Ready to create GCash request</div>
-                      <div class="mini-note mb-3" id="gcashPreviewSubtitle">Complete the fields to preview the request details.</div>
-                      <div class="row g-3">
-                        <div class="col-md-3">
-                          <div class="mini-note">Number</div>
-                          <div class="fw-semibold" id="gcashPreviewNumber">09XX XXX XXXX</div>
+                    <div class="eload-step">
+                      <div class="eload-step-header">
+                        <span class="eload-step-number">2</span>
+                        <div>
+                          <div class="eload-step-title">Mobile Number</div>
+                          <div class="mini-note">Enter the GCash number and optional reference.</div>
                         </div>
-                        <div class="col-md-3">
-                          <div class="mini-note">Reference</div>
-                          <div class="fw-semibold" id="gcashPreviewReference">Pending</div>
+                      </div>
+                      <div class="row g-4">
+                        <div class="col-md-6">
+                          <label class="form-label" for="gcashMobileNumber">GCash Number</label>
+                          <input class="form-control form-control-lg" id="gcashMobileNumber" name="mobileNumber" inputmode="numeric" maxlength="13" placeholder="09XX XXX XXXX" required>
                         </div>
-                        <div class="col-md-3">
-                          <div class="mini-note">Flow</div>
-                          <div class="fw-semibold" id="gcashPreviewFlow">Cash In</div>
-                        </div>
-                        <div class="col-md-3">
-                          <div class="mini-note">Amount</div>
-                          <div class="fw-semibold" id="gcashPreviewAmount">PHP 0.00</div>
+                        <div class="col-md-6">
+                          <label class="form-label" for="gcashReferenceNumber">Reference Number</label>
+                          <input class="form-control form-control-lg" id="gcashReferenceNumber" name="referenceNumber" placeholder="Optional when creating, required when completing">
                         </div>
                       </div>
                     </div>
                   </div>
 
                   <div class="col-12">
-                    <button class="btn btn-success px-4" type="submit">Create GCash Request</button>
+                    <div class="eload-step">
+                      <div class="eload-step-header">
+                        <span class="eload-step-number">3</span>
+                        <div>
+                          <div class="eload-step-title">Cash Flow + Amount</div>
+                          <div class="mini-note">Select cash in or cash out, then enter the amount.</div>
+                        </div>
+                      </div>
+                      <div class="row g-4">
+                        <div class="col-md-6">
+                          <label class="form-label" for="gcashCashFlow">Cash Flow</label>
+                          <select class="form-select form-select-lg" id="gcashCashFlow" name="cashFlow">
+                            <option value="Cash In">Cash In</option>
+                            <option value="Cash Out">Cash Out</option>
+                          </select>
+                        </div>
+                        <div class="col-md-6">
+                          <label class="form-label" for="gcashAmount">Amount</label>
+                          <div class="input-group input-group-lg">
+                            <span class="input-group-text">PHP</span>
+                            <input class="form-control" id="gcashAmount" name="amount" type="number" min="1" step="1" placeholder="100" required>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="mt-4">
+                        <label class="form-label" for="gcashNotes">Request Notes</label>
+                        <textarea class="form-control" id="gcashNotes" name="notes" rows="2" placeholder="Optional reminder or instruction for the completing staff."></textarea>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-12">
+                    <div class="eload-step">
+                      <div class="eload-step-header">
+                        <span class="eload-step-number">4</span>
+                        <div>
+                          <div class="eload-step-title">Preview Card</div>
+                          <div class="mini-note">Review the GCash request before saving it.</div>
+                        </div>
+                      </div>
+                      <div class="eload-preview p-4 rounded-4">
+                        <div class="mini-note">GCash Request Preview</div>
+                        <div class="h4 mb-1" id="gcashPreviewTitle">Ready to create GCash request</div>
+                        <div class="mini-note mb-3" id="gcashPreviewSubtitle">Complete the fields to preview the request details.</div>
+                        <div class="row g-3">
+                          <div class="col-md-3">
+                            <div class="mini-note">Number</div>
+                            <div class="fw-semibold" id="gcashPreviewNumber">09XX XXX XXXX</div>
+                          </div>
+                          <div class="col-md-3">
+                            <div class="mini-note">Reference</div>
+                            <div class="fw-semibold" id="gcashPreviewReference">Pending</div>
+                          </div>
+                          <div class="col-md-3">
+                            <div class="mini-note">Flow</div>
+                            <div class="fw-semibold" id="gcashPreviewFlow">Cash In</div>
+                          </div>
+                          <div class="col-md-3">
+                            <div class="mini-note">Amount</div>
+                            <div class="fw-semibold" id="gcashPreviewAmount">PHP 0.00</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-12">
+                    <div class="eload-step">
+                      <div class="eload-step-header">
+                        <span class="eload-step-number">5</span>
+                        <div>
+                          <div class="eload-step-title">CTA Button</div>
+                          <div class="mini-note">Create a pending GCash request.</div>
+                        </div>
+                      </div>
+                      <button class="btn eload-btn-primary px-4" type="submit">Create GCash Request</button>
+                    </div>
                   </div>
                 </form>
               </div>
@@ -251,7 +359,7 @@
                           <div class="d-inline-flex align-items-center gap-2">
                             <div class="mini-note mb-0"><%= entry.mobile_number %></div>
                             <button
-                              class="btn btn-sm btn-outline-secondary pending-request-copy"
+                              class="btn btn-sm eload-btn-ghost pending-request-copy"
                               type="button"
                               data-copy-number="<%= entry.mobile_number %>"
                               aria-label="Copy mobile number"
@@ -294,7 +402,7 @@
                         </div>
                       <% } %>
                       <div class="col-12">
-                        <button class="btn btn-success w-100">Mark as Completed</button>
+                        <button class="btn eload-btn-primary w-100">Mark as Completed</button>
                       </div>
                       <div class="col-12">
                         <button
@@ -357,12 +465,12 @@
   };
 
   const networkDescriptions = {
-    TM: "Budget-friendly TM promos and all-net essentials.",
-    GLOBE: "Popular Globe data, call, and combo offers.",
-    SMART: "Smart data bundles and Magic Data-style options.",
-    TNT: "TNT promo picks for calls, texts, and data.",
-    SUN: "Classic Sun load combos for texts and calls.",
-    DITO: "DITO data-focused packs and modern bundles."
+    TM: "Data | Call | Combo",
+    GLOBE: "Data | Call | Combo",
+    SMART: "Data | Call | Combo",
+    TNT: "Data | Call | Combo",
+    SUN: "Data | Call | Combo",
+    DITO: "Data | Call | Combo"
   };
 
   const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
@@ -699,6 +807,9 @@
   updateLoadSections();
   updatePreview();
   updateGcashPreview();
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((element) => {
+    bootstrap.Tooltip.getOrCreateInstance(element);
+  });
   window.setInterval(checkQueueUpdates, 3000);
 </script>
 </body>
