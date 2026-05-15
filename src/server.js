@@ -59,6 +59,8 @@ const sessionCookieName = "store.sid";
 
 initializeDatabase();
 
+
+
 app.disable("x-powered-by");
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "..", "views"));
@@ -1037,4 +1039,10 @@ app.use((req, res) => {
 
 app.listen(port, () => {
   console.log(`Sari-Sari Store app running at http://localhost:${port}`);
+  console.log('ADMIN Credentials');
+  console.log('   Username:  admin');
+  console.log('   Password:  admin123');
+  console.log('USER Credentials');
+  console.log('   Username:  user');
+  console.log('   Password:  user123');
 });

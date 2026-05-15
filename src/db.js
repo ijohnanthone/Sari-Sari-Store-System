@@ -738,12 +738,48 @@ function backfillLogTablesFromSales() {
 }
 
 function seedDefaults() {
-  if (!db.prepare("SELECT COUNT(*) AS count FROM users").get().count) {
-    db.prepare(`INSERT INTO users (username, full_name, role, email, phone, password_hash, pin_hash) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-      .run("admin", "Store Owner", "Admin", "owner@sarisaristore.com", "+63 912 345 6789", hashPassword("admin123"), hashPin("1234"));
+  const insertDefaultUser = db.prepare(`
+    INSERT INTO users (username, full_name, role, email, phone, password_hash, pin_hash)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+  const findUserByUsername = db.prepare("SELECT id FROM users WHERE username = ?");
+  const defaultUsers = [
+    {
+      username: "admin",
+      fullName: "Store Owner",
+      role: "Admin",
+      email: "owner@sarisaristore.com",
+      phone: "+63 912 345 6789",
+      password: "admin123",
+      pin: "1234"
+    },
+    {
+      username: "user",
+      fullName: "User Staff",
+      role: "User",
+      email: "user@sarisaristore.com",
+      phone: "+63 912 345 6790",
+      password: "user123",
+      pin: ""
+    }
+
+  ];
+
+  for (const user of defaultUsers) {
+    if (!findUserByUsername.get(user.username)) {
+      insertDefaultUser.run(
+        user.username,
+        user.fullName,
+        user.role,
+        user.email,
+        user.phone,
+        hashPassword(user.password),
+        user.role === "Admin" ? hashPin(user.pin) : ""
+      );
+    }
   }
 
-  const usersMissingPin = db.prepare("SELECT id FROM users WHERE pin_hash = '' OR pin_hash IS NULL").all();
+  const usersMissingPin = db.prepare("SELECT id FROM users WHERE role = 'Admin' AND (pin_hash = '' OR pin_hash IS NULL)").all();
   const assignDefaultPin = db.prepare("UPDATE users SET pin_hash = ? WHERE id = ?");
   for (const user of usersMissingPin) {
     assignDefaultPin.run(hashPin("1234"), user.id);
