@@ -14,11 +14,12 @@
                 <button
                   class="btn btn-sm btn-outline-secondary rounded-circle d-inline-flex align-items-center justify-content-center"
                   type="button"
-                  style="width: 1.9rem; height: 1.9rem;"
+                  style="width: 1.5rem; height: 1.5rem;"
                   data-bs-toggle="tooltip"
+                  data-bs-trigger="focus"
                   data-bs-placement="right"
                   data-bs-title="Any user or admin can create a pending Eload or GCash request, then complete it later with a full requester/completer audit trail."
-                  aria-label="Item search guide"
+                  aria-label="Digital service request guide"
                 >
                   ?
                 </button>
@@ -47,8 +48,19 @@
 
                 <div class="col-12">
                   <label class="form-label" for="eloadMobileNumber">Mobile Number</label>
+                  <button
+                    class="btn btn-sm btn-outline-secondary rounded-circle d-inline-flex align-items-center justify-content-center"
+                    type="button"
+                    style="width: 1.5rem; height: 1.5rem;"
+                    data-bs-toggle="tooltip"
+                    data-bs-trigger="focus"
+                    data-bs-placement="right"
+                    data-bs-title="Accepted format: 11-digit Philippine mobile number starting with `09`"
+                    aria-label="Mobile number format guide"
+                  >
+                    ?
+                  </button>
                   <input class="form-control form-control-lg" id="eloadMobileNumber" name="mobileNumber" inputmode="numeric" maxlength="13" placeholder="09XX XXX XXXX" required>
-                  <div class="mini-note mt-2">Accepted format: 11-digit Philippine mobile number starting with `09`.</div>
                 </div>
 
                 <div class="col-12">
@@ -699,6 +711,9 @@
   updateLoadSections();
   updatePreview();
   updateGcashPreview();
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((element) => {
+    bootstrap.Tooltip.getOrCreateInstance(element);
+  });
   window.setInterval(checkQueueUpdates, 3000);
 </script>
 </body>

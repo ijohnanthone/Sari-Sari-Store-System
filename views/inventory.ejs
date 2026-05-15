@@ -22,7 +22,7 @@
           <div class="col-md-6">
             <div class="input-group position-relative">
               <span class="input-group-text"><i class="bi bi-search"></i></span>
-              <input class="form-control" id="inventoryLiveSearch" name="search" value="<%= search %>" placeholder="Search items by name, category, or supplier" autocomplete="off">
+              <input class="form-control" id="inventoryLiveSearch" name="search" value="<%= search %>" placeholder="<%= user && user.role === 'Admin' ? 'Search items by name, category, or supplier' : 'Search items by name or category' %>" autocomplete="off">
             </div>
             <div class="pos-suggestions list-group mt-2 d-none" id="inventorySuggestions"></div>
           </div>
@@ -58,16 +58,31 @@
         <div class="mini-note mb-3 d-none" id="inventoryFilterSummary"></div>
         <div class="table-responsive">
           <table class="table align-middle">
-            <thead><tr><th>Item Name</th><th>Category</th><th>Supplier</th><th class="text-end">Unit Price</th><th class="text-end">Selling Price</th><th class="text-end">Profit</th><th>Status</th><% if (user && user.role === "Admin") { %><th class="text-end">Actions</th><% } %></tr></thead>
+            <thead>
+              <tr>
+                <th>Item Name</th>
+                <th>Category</th>
+                <% if (user && user.role === "Admin") { %>
+                  <th>Supplier</th>
+                  <th class="text-end">Unit Price</th>
+                <% } %>
+                <th class="text-end">Selling Price</th>
+                <% if (user && user.role === "Admin") { %><th class="text-end">Profit</th><% } %>
+                <th>Status</th>
+                <% if (user && user.role === "Admin") { %><th class="text-end">Actions</th><% } %>
+              </tr>
+            </thead>
             <tbody id="inventoryTableBody">
               <% items.forEach((item) => { %>
                 <tr data-item-name="<%= item.name.toLowerCase() %>" data-item-category="<%= item.category.toLowerCase() %>" data-item-supplier="<%= (item.supplier || '').toLowerCase() %>" data-item-status="<%= item.status %>">
                   <td class="fw-semibold"><%= item.name %></td>
                   <td><%= item.category %></td>
-                  <td><%= item.supplier || "N/A" %></td>
-                  <td class="text-end"><%= formatCurrency(item.unit_price) %></td>
+                  <% if (user && user.role === "Admin") { %>
+                    <td><%= item.supplier || "N/A" %></td>
+                    <td class="text-end"><%= formatCurrency(item.unit_price) %></td>
+                  <% } %>
                   <td class="text-end"><%= formatCurrency(item.selling_price) %></td>
-                  <td class="text-end text-success fw-semibold"><%= formatCurrency(item.profit) %></td>
+                  <% if (user && user.role === "Admin") { %><td class="text-end text-success fw-semibold"><%= formatCurrency(item.profit) %></td><% } %>
                   <td>
                     <% if (item.status === "In Stock") { %><span class="badge badge-soft-success">In Stock</span>
                     <% } else if (item.status === "Low Stock") { %><span class="badge badge-soft-warning">Low Stock</span>
@@ -82,7 +97,7 @@
                 </tr>
               <% }) %>
               <tr id="inventoryEmptyRow" class="<%= items.length ? 'd-none' : '' %>">
-                <td colspan="<%= user && user.role === 'Admin' ? 8 : 7 %>" class="text-center py-4 mini-note">No inventory items matched the current filters.</td>
+                <td colspan="<%= user && user.role === 'Admin' ? 8 : 4 %>" class="text-center py-4 mini-note">No inventory items matched the current filters.</td>
               </tr>
             </tbody>
           </table>
@@ -175,7 +190,7 @@
     inventorySuggestions.innerHTML = items.slice(0, 6).map((item) => `
       <button type="button" class="list-group-item list-group-item-action pos-suggestion" data-item-name="${escapeHtml(item.name)}">
         <div class="fw-semibold">${escapeHtml(item.name)}</div>
-        <div class="mini-note">${escapeHtml(item.category)} | ${escapeHtml(item.supplier || "N/A")} | ${escapeHtml(item.status)}</div>
+        <div class="mini-note">${canManageInventory ? `${escapeHtml(item.category)} | ${escapeHtml(item.supplier || "N/A")} | ${escapeHtml(item.status)}` : `${escapeHtml(item.category)} | ${escapeHtml(item.status)}`}</div>
       </button>
     `).join("");
     inventorySuggestions.classList.remove("d-none");
@@ -183,7 +198,7 @@
 
   function renderInventoryRows(items) {
     if (!items.length) {
-      inventoryTableBody.innerHTML = `<tr id="inventoryEmptyRow"><td colspan="${canManageInventory ? 8 : 7}" class="text-center py-4 mini-note">No inventory items matched the current filters.</td></tr>`;
+      inventoryTableBody.innerHTML = `<tr id="inventoryEmptyRow"><td colspan="${canManageInventory ? 8 : 4}" class="text-center py-4 mini-note">No inventory items matched the current filters.</td></tr>`;
       return;
     }
 
@@ -191,10 +206,10 @@
       <tr>
         <td class="fw-semibold">${escapeHtml(item.name)}</td>
         <td>${escapeHtml(item.category)}</td>
-        <td>${escapeHtml(item.supplier || "N/A")}</td>
-        <td class="text-end">${peso.format(item.unit_price)}</td>
+        ${canManageInventory ? `<td>${escapeHtml(item.supplier || "N/A")}</td>` : ""}
+        ${canManageInventory ? `<td class="text-end">${peso.format(item.unit_price)}</td>` : ""}
         <td class="text-end">${peso.format(item.selling_price)}</td>
-        <td class="text-end text-success fw-semibold">${peso.format(item.profit)}</td>
+        ${canManageInventory ? `<td class="text-end text-success fw-semibold">${peso.format(item.profit)}</td>` : ""}
         <td>${item.status === "In Stock" ? '<span class="badge badge-soft-success">In Stock</span>' : item.status === "Low Stock" ? '<span class="badge badge-soft-warning">Low Stock</span>' : '<span class="badge badge-soft-danger">Out of Stock</span>'}</td>
         ${canManageInventory ? `<td class="text-end">
           <button class="btn btn-sm btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#editItemModal-${item.id}"><i class="bi bi-pencil"></i></button>
