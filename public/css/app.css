@@ -1175,14 +1175,133 @@ body .app-flash-popup.alert.show {
 
 .eload-network-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 0.65rem;
 }
 
 .eload-page-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 1.5rem;
+}
+
+.eload-step {
+  padding: 1.1rem 0 0;
+  border-top: 1px solid color-mix(in srgb, var(--brand-emerald) 16%, var(--line-soft));
+}
+
+.eload-step-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.eload-step-number {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--brand-emerald);
+  color: var(--text-on-accent);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.eload-step-title {
+  color: var(--text-main);
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.btn.eload-btn-primary {
+  border-color: #16a34a;
+  background: #16a34a;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.btn.eload-btn-primary:hover,
+.btn.eload-btn-primary:focus-visible {
+  border-color: #15803d;
+  background: #15803d;
+  color: #ffffff;
+}
+
+.btn.eload-btn-secondary {
+  border-color: color-mix(in srgb, var(--brand-emerald) 58%, var(--input-border));
+  background: transparent;
+  color: var(--brand-emerald);
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.btn.eload-btn-secondary:hover,
+.btn.eload-btn-secondary:focus-visible {
+  border-color: var(--brand-emerald);
+  background: color-mix(in srgb, var(--brand-emerald) 9%, transparent);
+  color: var(--brand-emerald);
+}
+
+.btn.eload-btn-ghost {
+  border-color: color-mix(in srgb, var(--input-border) 78%, transparent);
+  background: transparent;
+  color: var(--text-strong);
+  box-shadow: none;
+}
+
+.btn.eload-btn-ghost:hover,
+.btn.eload-btn-ghost:focus-visible,
+.btn-check:checked + .btn.eload-btn-ghost {
+  border-color: color-mix(in srgb, var(--brand-emerald) 42%, var(--input-border));
+  background: color-mix(in srgb, var(--brand-emerald) 10%, transparent);
+  color: var(--text-strong);
+}
+
+body[data-theme="Dark Mode"] .btn.eload-btn-primary {
+  border-color: rgba(0, 230, 118, 0.48);
+  background: linear-gradient(135deg, #00c853 0%, #00e676 100%);
+  color: #ffffff;
+  box-shadow: 0 0.7rem 1.5rem rgba(0, 230, 118, 0.22);
+}
+
+body[data-theme="Dark Mode"] .btn.eload-btn-primary:hover,
+body[data-theme="Dark Mode"] .btn.eload-btn-primary:focus-visible {
+  border-color: rgba(105, 240, 174, 0.62);
+  background: linear-gradient(135deg, #00b84d 0%, #00d96f 100%);
+  color: #ffffff;
+  box-shadow: 0 0.8rem 1.7rem rgba(0, 230, 118, 0.28);
+}
+
+body[data-theme="Dark Mode"] .btn.eload-btn-secondary {
+  border-color: rgba(0, 230, 118, 0.42);
+  background: transparent;
+  color: #8ff7b5;
+}
+
+body[data-theme="Dark Mode"] .btn.eload-btn-secondary:hover,
+body[data-theme="Dark Mode"] .btn.eload-btn-secondary:focus-visible {
+  border-color: rgba(0, 230, 118, 0.62);
+  background: rgba(0, 230, 118, 0.11);
+  color: #ffffff;
+}
+
+body[data-theme="Dark Mode"] .btn.eload-btn-ghost {
+  border-color: rgba(167, 139, 250, 0.2);
+  background: rgba(17, 20, 52, 0.34);
+  color: var(--text-strong);
+}
+
+body[data-theme="Dark Mode"] .btn.eload-btn-ghost:hover,
+body[data-theme="Dark Mode"] .btn.eload-btn-ghost:focus-visible,
+body[data-theme="Dark Mode"] .btn-check:checked + .btn.eload-btn-ghost {
+  border-color: rgba(0, 230, 118, 0.34);
+  background: rgba(0, 230, 118, 0.1);
+  color: #ffffff;
 }
 
 .eload-service-grid {
@@ -1198,93 +1317,105 @@ body .app-flash-popup.alert.show {
   flex-direction: column;
   gap: 0.55rem;
   text-align: left;
-  min-height: 7.5rem;
-  padding: 1.35rem;
+  min-height: 6.25rem;
+  padding: 1.1rem 1.15rem 1.1rem 1.35rem;
   overflow: hidden;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: linear-gradient(135deg, var(--brand-emerald), var(--brand-teal));
-  color: rgba(255, 255, 255, 0.95);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.24),
-    inset 0 -1.2rem 2.4rem rgba(0, 0, 0, 0.14),
-    0 1rem 2.2rem var(--eload-service-glow, rgba(15, 23, 42, 0.16));
-  backdrop-filter: blur(14px);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, filter 0.2s ease;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--eload-service-accent, var(--brand-emerald)) 18%, var(--input-border));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--eload-service-accent, var(--brand-emerald)) 7%, transparent), transparent 58%),
+    var(--surface-card);
+  color: var(--text-strong);
+  box-shadow: 0 0.45rem 1.1rem rgba(15, 23, 42, 0.07);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
 .eload-service-card::before {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: 0 auto 0 0;
+  width: 0.35rem;
   z-index: -1;
-  background:
-    radial-gradient(circle at 15% 12%, rgba(255, 255, 255, 0.34), transparent 1rem),
-    radial-gradient(circle at 86% 10%, rgba(255, 255, 255, 0.22), transparent 3rem),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.15), transparent 48%);
-  opacity: 0.9;
+  background: linear-gradient(180deg, var(--eload-service-accent, var(--brand-emerald)), var(--eload-service-accent-end, var(--brand-teal)));
 }
 
 .eload-service-card::after {
   content: "";
   position: absolute;
-  inset: 1px;
+  inset: 0;
   z-index: -1;
-  border-radius: 19px;
-  background:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.36), rgba(0, 0, 0, 0.16) 58%, rgba(0, 0, 0, 0.26)),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.3));
-  box-shadow: inset 0 0 2.4rem rgba(255, 255, 255, 0.06);
+  border-radius: inherit;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--eload-service-accent, var(--brand-emerald)) 7%, transparent), transparent 42%);
   pointer-events: none;
 }
 
 .eload-service-card[data-service-card="eload"] {
-  background: linear-gradient(135deg, #ff4d8d 0%, #e83e8c 46%, #8b5cf6 100%);
-  --eload-service-glow: rgba(232, 62, 140, 0.34);
+  --eload-service-accent: #e83e8c;
+  --eload-service-accent-end: #8b5cf6;
 }
 
 .eload-service-card[data-service-card="gcash"] {
-  background: linear-gradient(135deg, #0f73ff 0%, #1e88e5 48%, #00c2ff 100%);
-  --eload-service-glow: rgba(30, 136, 229, 0.34);
+  --eload-service-accent: #1e88e5;
+  --eload-service-accent-end: #00c2ff;
 }
 
 .eload-service-card > .fw-semibold {
-  color: #ffffff;
+  color: var(--text-strong);
   font-weight: 800 !important;
-  text-shadow: 0 0.12rem 0.38rem rgba(0, 0, 0, 0.68);
+  text-shadow: none;
 }
 
 .eload-service-card > .mini-note {
-  color: rgba(255, 255, 255, 0.94) !important;
+  color: var(--text-muted) !important;
   font-size: 0.92rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.5;
-  text-shadow: 0 0.08rem 0.35rem rgba(0, 0, 0, 0.64);
+  text-shadow: none;
 }
 
 .eload-service-card:hover,
 .eload-service-card:focus-visible {
-  transform: translateY(-3px) scale(1.012);
-  border-color: rgba(255, 255, 255, 0.42);
-  filter: saturate(1.04) brightness(1.01);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    inset 0 -1.2rem 2.4rem rgba(0, 0, 0, 0.12),
-    0 1.15rem 2.6rem var(--eload-service-glow, rgba(15, 23, 42, 0.22));
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--eload-service-accent, var(--brand-emerald)) 42%, var(--input-border));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--eload-service-accent, var(--brand-emerald)) 10%, transparent), transparent 58%),
+    var(--surface-card);
+  box-shadow: 0 0.55rem 1.25rem rgba(15, 23, 42, 0.09);
 }
 
 .eload-service-card:focus-visible {
-  outline: 3px solid rgba(255, 255, 255, 0.72);
+  outline: 3px solid color-mix(in srgb, var(--eload-service-accent, var(--brand-emerald)) 26%, transparent);
   outline-offset: 3px;
 }
 
 .eload-service-card.is-selected {
-  border-color: rgba(255, 255, 255, 0.72);
+  border-color: color-mix(in srgb, var(--eload-service-accent, var(--brand-emerald)) 58%, var(--input-border));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--eload-service-accent, var(--brand-emerald)) 13%, transparent), transparent 58%),
+    var(--surface-card);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.32),
-    inset 0 -1.2rem 2.4rem rgba(0, 0, 0, 0.12),
-    0 0 0 2px rgba(255, 255, 255, 0.16),
-    0 1.2rem 2.8rem var(--eload-service-glow, rgba(15, 23, 42, 0.24));
+    0 0 0 2px color-mix(in srgb, var(--eload-service-accent, var(--brand-emerald)) 12%, transparent),
+    0 0.6rem 1.35rem rgba(15, 23, 42, 0.1);
+}
+
+body[data-theme="Dark Mode"] .eload-service-card {
+  border-color: color-mix(in srgb, var(--eload-service-accent, var(--brand-emerald)) 24%, var(--input-border));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--eload-service-accent, var(--brand-emerald)) 12%, transparent), transparent 62%),
+    var(--surface-card);
+  box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.22);
+}
+
+body[data-theme="Dark Mode"] .eload-service-card:hover,
+body[data-theme="Dark Mode"] .eload-service-card:focus-visible,
+body[data-theme="Dark Mode"] .eload-service-card.is-selected {
+  border-color: color-mix(in srgb, var(--eload-service-accent, var(--brand-emerald)) 52%, var(--input-border));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--eload-service-accent, var(--brand-emerald)) 18%, transparent), transparent 62%),
+    var(--surface-card);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--eload-service-accent, var(--brand-emerald)) 18%, transparent),
+    0 0.65rem 1.45rem rgba(0, 0, 0, 0.28);
 }
 
 .eload-network-card {
@@ -1292,20 +1423,20 @@ body .app-flash-popup.alert.show {
   isolation: isolate;
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
-  min-height: 7.75rem;
+  justify-content: center;
+  gap: 0.2rem;
+  min-height: 4.25rem;
   text-align: left;
-  padding: 1.15rem;
+  padding: 0.75rem 0.9rem;
   overflow: hidden;
-  border-radius: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.26);
   background: linear-gradient(135deg, var(--brand-emerald), var(--brand-teal));
   color: rgba(255, 255, 255, 0.95);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    inset 0 -1.2rem 2.4rem rgba(0, 0, 0, 0.12),
-    0 0.95rem 2rem var(--eload-network-glow, rgba(15, 23, 42, 0.18));
-  backdrop-filter: blur(14px);
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -0.55rem 1.1rem rgba(0, 0, 0, 0.1),
+    0 0.35rem 0.9rem var(--eload-network-glow, rgba(15, 23, 42, 0.12));
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, filter 0.2s ease;
 }
 
@@ -1315,10 +1446,9 @@ body .app-flash-popup.alert.show {
   inset: 0;
   z-index: -1;
   background:
-    radial-gradient(circle at 18% 15%, rgba(255, 255, 255, 0.34), transparent 0.9rem),
-    radial-gradient(circle at 84% 12%, rgba(255, 255, 255, 0.22), transparent 2.5rem),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.14), transparent 48%);
-  opacity: 0.9;
+    radial-gradient(circle at 18% 15%, rgba(255, 255, 255, 0.22), transparent 0.7rem),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.1), transparent 48%);
+  opacity: 0.72;
 }
 
 .eload-network-card::after {
@@ -1326,28 +1456,27 @@ body .app-flash-popup.alert.show {
   position: absolute;
   inset: 1px;
   z-index: -1;
-  border-radius: 19px;
+  border-radius: 0.58rem;
   background:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0.14) 58%, rgba(0, 0, 0, 0.24)),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.3));
-  box-shadow: inset 0 0 2.2rem rgba(255, 255, 255, 0.06);
+    linear-gradient(90deg, rgba(0, 0, 0, 0.24), rgba(0, 0, 0, 0.1) 58%, rgba(0, 0, 0, 0.18)),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.18));
   pointer-events: none;
 }
 
 .eload-network-card > .fw-semibold {
   color: #ffffff;
-  font-size: 1.05rem;
+  font-size: 0.98rem;
   font-weight: 800 !important;
   letter-spacing: 0;
-  text-shadow: 0 0.12rem 0.38rem rgba(0, 0, 0, 0.68);
+  text-shadow: 0 0.1rem 0.28rem rgba(0, 0, 0, 0.54);
 }
 
 .eload-network-card > .mini-note {
   color: rgba(255, 255, 255, 0.94) !important;
-  font-size: 0.92rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  line-height: 1.5;
-  text-shadow: 0 0.08rem 0.35rem rgba(0, 0, 0, 0.64);
+  line-height: 1.2;
+  text-shadow: 0 0.08rem 0.25rem rgba(0, 0, 0, 0.5);
 }
 
 .eload-network-card[data-network="TM"] {
@@ -1379,8 +1508,8 @@ body .app-flash-popup.alert.show {
 .eload-network-card[data-network="TNT"]::after,
 .eload-network-card[data-network="SUN"]::after {
   background:
-    linear-gradient(90deg, rgba(0, 0, 0, 0.46), rgba(0, 0, 0, 0.22) 58%, rgba(0, 0, 0, 0.34)),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.36));
+    linear-gradient(90deg, rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0.18) 58%, rgba(0, 0, 0, 0.26)),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.24));
 }
 
 .eload-network-card[data-network="DITO"] {
@@ -1390,13 +1519,13 @@ body .app-flash-popup.alert.show {
 
 .eload-network-card:hover,
 .eload-network-card:focus-visible {
-  transform: translateY(-3px) scale(1.018);
+  transform: translateY(-1px);
   border-color: rgba(255, 255, 255, 0.42);
   filter: saturate(1.04) brightness(1.01);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
-    inset 0 -1.2rem 2.4rem rgba(0, 0, 0, 0.1),
-    0 1.15rem 2.6rem var(--eload-network-glow, rgba(15, 23, 42, 0.22));
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -0.55rem 1.1rem rgba(0, 0, 0, 0.09),
+    0 0.45rem 1rem var(--eload-network-glow, rgba(15, 23, 42, 0.15));
 }
 
 .eload-network-card:focus-visible {
@@ -1407,10 +1536,10 @@ body .app-flash-popup.alert.show {
 .eload-network-card.is-selected {
   border-color: rgba(255, 255, 255, 0.72);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.32),
-    inset 0 -1.2rem 2.4rem rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -0.55rem 1.1rem rgba(0, 0, 0, 0.08),
     0 0 0 2px rgba(255, 255, 255, 0.16),
-    0 1.2rem 2.8rem var(--eload-network-glow, rgba(15, 23, 42, 0.24));
+    0 0.5rem 1.05rem var(--eload-network-glow, rgba(15, 23, 42, 0.16));
 }
 
 .eload-preview {
