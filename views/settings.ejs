@@ -91,35 +91,43 @@
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <div class="content-card p-4">
               <div class="section-title mb-3">Appearance Settings</div>
-              <div class="row g-3">
-                <div class="col-md-3"><label class="form-label">Theme</label><select class="form-select" name="theme"><option value="Light Mode" <%= appearance.theme === 'Light Mode' ? 'selected' : '' %>>Light Mode</option><option value="Dark Mode" <%= appearance.theme === 'Dark Mode' ? 'selected' : '' %>>Dark Mode</option></select></div>
-                <% const colorSchemeOptions = ["Emerald", "Blue", "Amber", "Violet", "Ocean", "Rose"]; %>
-                <% const optionalColorSchemeOptions = ["None", ...colorSchemeOptions]; %>
-                <div class="col-md-3">
-                  <label class="form-label">Primary Color Scheme</label>
-                  <select class="form-select" name="colorScheme">
-                    <% colorSchemeOptions.forEach((scheme) => { %>
-                      <option value="<%= scheme %>" <%= appearance.colorScheme === scheme ? 'selected' : '' %>><%= scheme %></option>
-                    <% }) %>
-                  </select>
+              <div class="mb-4">
+                <label class="form-label d-block">Theme</label>
+                <div class="settings-theme-grid">
+                  <% const themeOptions = [
+                    { value: "Light Mode", preview: "light", status: "Current theme" },
+                    { value: "Dark Mode", preview: "dark", status: "Coming soon" }
+                  ]; %>
+                  <% themeOptions.forEach((theme) => { %>
+                    <input class="appearance-option-input" type="radio" id="theme<%= theme.value.replace(/\s/g, '') %>" name="theme" value="<%= theme.value %>" <%= appearance.theme === theme.value ? 'checked' : '' %>>
+                    <label class="settings-theme-option" for="theme<%= theme.value.replace(/\s/g, '') %>">
+                      <span class="settings-theme-preview settings-theme-preview-<%= theme.preview %>"></span>
+                      <span class="settings-theme-title"><%= theme.value %></span>
+                      <span class="settings-theme-status"><%= appearance.theme === theme.value ? 'Current theme' : theme.status %></span>
+                    </label>
+                  <% }) %>
                 </div>
-                <div class="col-md-3">
-                  <label class="form-label">Second Color Scheme</label>
-                  <select class="form-select" name="colorSchemeSecondary">
-                    <% optionalColorSchemeOptions.forEach((scheme) => { %>
-                      <option value="<%= scheme %>" <%= appearance.colorSchemeSecondary === scheme ? 'selected' : '' %>><%= scheme %></option>
-                    <% }) %>
-                  </select>
+              </div>
+              <div>
+                <% const colorSchemeOptions = [
+                  { name: "Emerald", color: "#00b894" },
+                  { name: "Blue", color: "#74b9ff" },
+                  { name: "Violet", color: "#d980fa" },
+                  { name: "Rose", color: "#ff9f80" }
+                ]; %>
+                <% const selectedColorScheme = colorSchemeOptions.some((scheme) => scheme.name === appearance.colorScheme) ? appearance.colorScheme : "Emerald"; %>
+                <input type="hidden" name="colorSchemeSecondary" value="None">
+                <input type="hidden" name="colorSchemeTertiary" value="None">
+                <label class="form-label d-block">Color Scheme</label>
+                <div class="settings-color-swatches" role="radiogroup" aria-label="Color Scheme">
+                  <% colorSchemeOptions.forEach((scheme) => { %>
+                    <input class="appearance-option-input" type="radio" id="colorScheme<%= scheme.name %>" name="colorScheme" value="<%= scheme.name %>" <%= selectedColorScheme === scheme.name ? 'checked' : '' %>>
+                    <label class="settings-color-swatch" for="colorScheme<%= scheme.name %>" style="--scheme-color: <%= scheme.color %>">
+                      <span class="visually-hidden"><%= scheme.name %></span>
+                    </label>
+                  <% }) %>
                 </div>
-                <div class="col-md-3">
-                  <label class="form-label">Third Color Scheme</label>
-                  <select class="form-select" name="colorSchemeTertiary">
-                    <% optionalColorSchemeOptions.forEach((scheme) => { %>
-                      <option value="<%= scheme %>" <%= appearance.colorSchemeTertiary === scheme ? 'selected' : '' %>><%= scheme %></option>
-                    <% }) %>
-                  </select>
-                </div>
-                <div class="col-12 mini-note">Use None for a single-color theme, or choose second and third schemes for dual or tri-color gradients.</div>
+                <div class="mini-note mt-2">More color options coming in future updates</div>
               </div>
             </div>
             <div class="content-card p-4">
