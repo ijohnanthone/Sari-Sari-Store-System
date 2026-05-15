@@ -229,7 +229,8 @@ function createSchema() {
       color_scheme TEXT NOT NULL DEFAULT 'Emerald',
       color_scheme_secondary TEXT NOT NULL DEFAULT 'None',
       color_scheme_tertiary TEXT NOT NULL DEFAULT 'None',
-      font_size TEXT NOT NULL DEFAULT 'Normal'
+      font_size TEXT NOT NULL DEFAULT 'Normal',
+      appearance_scale INTEGER NOT NULL DEFAULT 100
     );
     CREATE TABLE IF NOT EXISTS suppliers (
       supplier_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -303,6 +304,9 @@ function ensureStoreSettingsSchema() {
   }
   if (!columnNames.has("font_size")) {
     db.exec("ALTER TABLE store_settings ADD COLUMN font_size TEXT NOT NULL DEFAULT 'Normal'");
+  }
+  if (!columnNames.has("appearance_scale")) {
+    db.exec("ALTER TABLE store_settings ADD COLUMN appearance_scale INTEGER NOT NULL DEFAULT 100");
   }
 }
 
@@ -788,8 +792,8 @@ function seedDefaults() {
   if (!db.prepare("SELECT COUNT(*) AS count FROM store_settings").get().count) {
     db.prepare(`
       INSERT INTO store_settings
-      (id, store_name, store_address, contact_number, tax_id, operating_hours, low_stock_alert, out_of_stock_alert, daily_sales_alert, weekly_sales_alert, theme, color_scheme, color_scheme_secondary, color_scheme_tertiary, font_size)
-      VALUES (1, ?, ?, ?, ?, ?, 1, 1, 1, 0, 'Light Mode', 'Emerald', 'None', 'None', 'Normal')
+      (id, store_name, store_address, contact_number, tax_id, operating_hours, low_stock_alert, out_of_stock_alert, daily_sales_alert, weekly_sales_alert, theme, color_scheme, color_scheme_secondary, color_scheme_tertiary, font_size, appearance_scale)
+      VALUES (1, ?, ?, ?, ?, ?, 1, 1, 1, 0, 'Light Mode', 'Emerald', 'None', 'None', 'Normal', 100)
     `).run("Sari-Sari Store", "123 Barangay Street, City, Province", "+63 912 345 6789", "", "Monday - Sunday, 6:00 AM - 10:00 PM");
   }
 
@@ -1021,8 +1025,8 @@ export function updateNotifications(input) {
 }
 
 export function updateAppearance(input) {
-  db.prepare(`UPDATE store_settings SET theme = ?, color_scheme = ?, color_scheme_secondary = ?, color_scheme_tertiary = ?, font_size = ? WHERE id = 1`)
-    .run(input.theme, input.colorScheme, input.colorSchemeSecondary, input.colorSchemeTertiary, input.fontSize);
+  db.prepare(`UPDATE store_settings SET theme = ?, color_scheme = ?, color_scheme_secondary = ?, color_scheme_tertiary = ?, font_size = ?, appearance_scale = ? WHERE id = 1`)
+    .run(input.theme, input.colorScheme, input.colorSchemeSecondary, input.colorSchemeTertiary, input.fontSize, input.scale);
 }
 
 export function listInventory(search = "", status = "all") {
