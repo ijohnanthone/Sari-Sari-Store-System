@@ -87,7 +87,7 @@
         </div>
         <% } %>
         <div class="tab-pane fade <%= activeTab === 'appearance' ? 'show active' : '' %>" id="appearance-tab">
-          <form action="/settings/appearance" method="post" class="vstack gap-3">
+          <form action="/settings/appearance" method="post" class="vstack gap-3" id="appearanceSettingsForm">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <div class="content-card p-4">
               <div class="section-title mb-3">Appearance Settings</div>
@@ -103,7 +103,7 @@
                     <label class="settings-theme-option" for="theme<%= theme.value.replace(/\s/g, '') %>">
                       <span class="settings-theme-preview settings-theme-preview-<%= theme.preview %>"></span>
                       <span class="settings-theme-title"><%= theme.value %></span>
-                      <span class="settings-theme-status"><%= appearance.theme === theme.value ? 'Current theme' : theme.status %></span>
+                      <span class="settings-theme-status" data-theme-status="<%= theme.value %>"><%= appearance.theme === theme.value ? 'Current theme' : theme.status %></span>
                     </label>
                   <% }) %>
                 </div>
@@ -116,8 +116,6 @@
                   { name: "Rose", color: "#ff9f80" }
                 ]; %>
                 <% const selectedColorScheme = colorSchemeOptions.some((scheme) => scheme.name === appearance.colorScheme) ? appearance.colorScheme : "Emerald"; %>
-                <input type="hidden" name="colorSchemeSecondary" value="None">
-                <input type="hidden" name="colorSchemeTertiary" value="None">
                 <label class="form-label d-block">Color Scheme</label>
                 <div class="settings-color-swatches" role="radiogroup" aria-label="Color Scheme">
                   <% colorSchemeOptions.forEach((scheme) => { %>
@@ -164,15 +162,86 @@
                 </div>
               </div>
             </div>
+            <div id="appearanceBrowserAlert"></div>
             <div><button class="btn btn-success">Save Appearance</button></div>
           </form>
           <script>
             (() => {
+              const form = document.getElementById("appearanceSettingsForm");
               const scaleRange = document.getElementById("scaleRange");
               const scaleValue = document.getElementById("scaleValue");
-              if (!scaleRange || !scaleValue) return;
+              const browserAlert = document.getElementById("appearanceBrowserAlert");
+              const allowedThemes = new Set(["Light Mode", "Dark Mode"]);
+              const allowedSchemes = new Set(["Emerald", "Blue", "Violet", "Rose"]);
+              const allowedFontSizes = new Set(["Small", "Normal", "Large", "Extra Large"]);
+
+              function normalizeScale(value) {
+                const numeric = Number.parseInt(String(value || "").replace("%", ""), 10);
+                if (!Number.isFinite(numeric)) return "100";
+                return String(Math.min(200, Math.max(10, Math.round(numeric / 10) * 10)));
+              }
+
+              function readBrowserAppearance() {
+                try {
+                  const key = document.body.dataset.appearanceKey;
+                  const saved = key ? JSON.parse(window.localStorage.getItem(key) || "null") : null;
+                  return saved && typeof saved === "object" ? saved : {};
+                } catch (error) {
+                  return {};
+                }
+              }
+
+              function getAppearanceFromForm() {
+                return {
+                  theme: form.querySelector("input[name='theme']:checked")?.value || "Light Mode",
+                  colorScheme: form.querySelector("input[name='colorScheme']:checked")?.value || "Emerald",
+                  fontSize: form.fontSize?.value || "Normal",
+                  scale: normalizeScale(form.scale?.value)
+                };
+              }
+
+              function applyAppearance(values) {
+                document.body.dataset.theme = allowedThemes.has(values.theme) ? values.theme : "Light Mode";
+                document.body.dataset.colorScheme = allowedSchemes.has(values.colorScheme) ? values.colorScheme : "Emerald";
+                document.body.dataset.fontSize = allowedFontSizes.has(values.fontSize) ? values.fontSize : "Normal";
+                document.body.dataset.scale = normalizeScale(values.scale);
+              }
+
+              function updateForm(values) {
+                const theme = allowedThemes.has(values.theme) ? values.theme : document.body.dataset.theme;
+                const colorScheme = allowedSchemes.has(values.colorScheme) ? values.colorScheme : document.body.dataset.colorScheme;
+                const fontSize = allowedFontSizes.has(values.fontSize) ? values.fontSize : document.body.dataset.fontSize;
+                const scale = normalizeScale(values.scale || document.body.dataset.scale);
+                const themeInput = Array.from(form.querySelectorAll("input[name='theme']")).find((input) => input.value === theme);
+                const colorInput = Array.from(form.querySelectorAll("input[name='colorScheme']")).find((input) => input.value === colorScheme);
+                if (themeInput) themeInput.checked = true;
+                if (colorInput) colorInput.checked = true;
+                if (form.fontSize) form.fontSize.value = fontSize;
+                if (scaleRange) scaleRange.value = scale;
+                if (scaleValue) scaleValue.textContent = `${scale}%`;
+                form.querySelectorAll("[data-theme-status]").forEach((element) => {
+                  element.textContent = element.dataset.themeStatus === theme ? "Current theme" : (element.dataset.themeStatus === "Dark Mode" ? "Coming soon" : "");
+                });
+              }
+
+              function showSavedAlert() {
+                if (!browserAlert) return;
+                browserAlert.innerHTML = '<div class="alert alert-success mb-0" role="alert">Appearance preferences saved in this browser for this account.</div>';
+              }
+
+              if (!form || !scaleRange || !scaleValue) return;
+              updateForm(readBrowserAppearance());
               scaleRange.addEventListener("input", () => {
                 scaleValue.textContent = `${scaleRange.value}%`;
+              });
+              form.addEventListener("submit", (event) => {
+                event.preventDefault();
+                const appearance = getAppearanceFromForm();
+                const key = document.body.dataset.appearanceKey;
+                if (key) window.localStorage.setItem(key, JSON.stringify(appearance));
+                applyAppearance(appearance);
+                updateForm(appearance);
+                showSavedAlert();
               });
             })();
           </script>

@@ -37,7 +37,6 @@ import {
   deleteSupplier,
   updateUserAccount,
   updateUserPin,
-  updateAppearance,
   updateCategory,
   updateInventoryItem,
   updateNotifications,
@@ -163,42 +162,6 @@ function buildNotifications(storeSettings) {
   return notifications;
 }
 
-function normalizeTheme(value) {
-  const normalized = String(value || "").trim().toLowerCase();
-  if (normalized === "dark" || normalized === "dark mode") return "Dark Mode";
-  return "Light Mode";
-}
-
-function normalizeColorScheme(value) {
-  const normalized = String(value || "").trim().toLowerCase();
-  if (normalized === "blue") return "Blue";
-  if (normalized === "amber") return "Amber";
-  if (normalized === "violet") return "Violet";
-  if (normalized === "ocean") return "Ocean";
-  if (normalized === "rose") return "Rose";
-  return "Emerald";
-}
-
-function normalizeOptionalColorScheme(value) {
-  const normalized = String(value || "").trim().toLowerCase();
-  if (normalized === "none" || normalized === "") return "None";
-  return normalizeColorScheme(value);
-}
-
-function normalizeFontSize(value) {
-  const normalized = String(value || "").trim().toLowerCase();
-  if (normalized === "small") return "Small";
-  if (normalized === "large") return "Large";
-  if (normalized === "extra large" || normalized === "extra-large" || normalized === "x-large") return "Extra Large";
-  return "Normal";
-}
-
-function normalizeScale(value) {
-  const numeric = Number.parseInt(String(value || "").replace("%", ""), 10);
-  if (!Number.isFinite(numeric)) return 100;
-  return Math.min(200, Math.max(10, Math.round(numeric / 10) * 10));
-}
-
 function sendNoStore(res) {
   res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
   res.setHeader("Pragma", "no-cache");
@@ -240,12 +203,10 @@ app.use((req, res, next) => {
   res.locals.quickSearchStatus = req.path === "/inventory" ? inventoryStatus : "all";
   res.locals.flash = req.session.flash || null;
   res.locals.appearance = {
-    theme: normalizeTheme(storeSettings.theme),
-    colorScheme: normalizeColorScheme(storeSettings.color_scheme),
-    colorSchemeSecondary: normalizeOptionalColorScheme(storeSettings.color_scheme_secondary),
-    colorSchemeTertiary: normalizeOptionalColorScheme(storeSettings.color_scheme_tertiary),
-    fontSize: normalizeFontSize(storeSettings.font_size),
-    scale: normalizeScale(storeSettings.appearance_scale)
+    theme: "Light Mode",
+    colorScheme: "Emerald",
+    fontSize: "Normal",
+    scale: 100
   };
   delete req.session.flash;
   if (req.session.user) sendNoStore(res);
@@ -947,15 +908,7 @@ app.post("/settings/notifications", requireAuth, requireAdmin, (req, res) => {
 });
 
 app.post("/settings/appearance", requireAuth, (req, res) => {
-  updateAppearance({
-    theme: normalizeTheme(req.body.theme),
-    colorScheme: normalizeColorScheme(req.body.colorScheme),
-    colorSchemeSecondary: normalizeOptionalColorScheme(req.body.colorSchemeSecondary),
-    colorSchemeTertiary: normalizeOptionalColorScheme(req.body.colorSchemeTertiary),
-    fontSize: normalizeFontSize(req.body.fontSize),
-    scale: normalizeScale(req.body.scale)
-  });
-  setFlash(req, "success", "Appearance preferences saved.");
+  setFlash(req, "success", "Appearance preferences are saved in this browser.");
   res.redirect("/settings?tab=appearance");
 });
 
