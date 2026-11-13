@@ -2,7 +2,26 @@
 
 All notable changes to the Sari-Sari Store Management System are documented here.
 
-This project does not currently use Git tags, so versions below are inferred from the Git commit history and the current `package.json` version. The current release is treated as `1.13.0`.
+This project does not currently use Git tags, so versions below are inferred from the Git commit history and the current `package.json` version. The current release is treated as `1.14.0`.
+
+## [1.14.0] - 2026-11-13
+
+### What's New
+- Added responsive pagination across key modules:
+  - **Inventory Tab**: Configurable item pagination with page size options (5, 10, 25, 50, 100), item count summary, and smart page navigation.
+  - **Sales Tab**: Product catalog pagination with configurable page size options (5, 10, 25, 50, 100) and synchronized category/search filters.
+  - **eLoad Queue Tab**: Independent pagination for Pending Queue requests and Recent Processed transactions (5, 10, 25, 50, 100).
+  - **Daily Logs Tab**: Section-level pagination for Product Logs, eLoad Logs, and GCash Logs tables (5, 10, 25, 50, 100).
+
+### UI/UX & Design
+- Upgraded layout to a persistent left-hand sidebar navigation on desktop viewports (≥992px) with clean category headers (`MAIN MENU`, `MANAGEMENT`).
+- Streamlined the desktop topbar, removing duplicate navigation pills and consolidating account controls.
+- Removed duplicate logout and profile controls from the sidebar footer to unify account actions in the topbar dropdown.
+- Modernized design tokens in `app.css` to a clean, flat surface style with crisp borders and subtle shadows.
+- Made the Version Notice modal body scrollable with constrained vertical height so lengthy release notes scroll smoothly without stretching the modal dialog.
+
+### Performance
+- Reduced font icon overhead across navigation links and buttons for snappier page rendering and improved load performance.
 
 ## [1.13.0] - 2026-08-09
 

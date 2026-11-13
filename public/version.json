@@ -1,10 +1,10 @@
 {
-  "version": "1.13.0",
+  "version": "1.14.0",
   "changes": [
-    "Unified the POS product search and barcode entry into one responsive input for product names, categories, and physical barcode scanners.",
-    "Added the camera icon scanner action to the unified POS search while preserving the existing scanner modal and barcode lookup flow.",
-    "Fixed Version Notice and Trusted Device Quick Login modal sequencing so only one modal is active at a time.",
-    "Fixed modal layering so standard and scanner modals cover the floating cart control without changing the cart layout or behavior.",
-    "Improved the camera scanner modal for desktop, laptop, tablet, and narrow mobile viewports with constrained sizing and scrollable content."
+    "Added pagination support across the Inventory tab, Sales product catalog, eLoad Queue (Pending & Recent), and Daily Logs tables with configurable page sizes (5, 10, 25, 50, 100).",
+    "Redesigned the application layout with a persistent modern left sidebar on desktop and streamlined top header bar.",
+    "Removed redundant user card and logout triggers from the sidebar to unify profile and session management in the header menu.",
+    "Optimized font and asset loading by reducing icon dependencies for faster render times.",
+    "Made the Version Notice modal body scrollable with constrained viewport sizing so long release notes never stretch the dialog card."
   ]
 }
