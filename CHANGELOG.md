@@ -2,7 +2,64 @@
 
 All notable changes to the Sari-Sari Store Management System are documented here.
 
-This project does not currently use Git tags, so versions below are inferred from the Git commit history and the current `package.json` version. The current release is treated as `1.10.1`.
+This project does not currently use Git tags, so versions below are inferred from the Git commit history and the current `package.json` version. The current release is treated as `1.14.0`.
+
+## [1.14.0] - 2026-11-13
+
+### What's New
+- Added responsive pagination across key modules:
+  - **Inventory Tab**: Configurable item pagination with page size options (5, 10, 25, 50, 100), item count summary, and smart page navigation.
+  - **Sales Tab**: Product catalog pagination with configurable page size options (5, 10, 25, 50, 100) and synchronized category/search filters.
+  - **eLoad Queue Tab**: Independent pagination for Pending Queue requests and Recent Processed transactions (5, 10, 25, 50, 100).
+  - **Daily Logs Tab**: Section-level pagination for Product Logs, eLoad Logs, and GCash Logs tables (5, 10, 25, 50, 100).
+
+### UI/UX & Design
+- Upgraded layout to a persistent left-hand sidebar navigation on desktop viewports (≥992px) with clean category headers (`MAIN MENU`, `MANAGEMENT`).
+- Streamlined the desktop topbar, removing duplicate navigation pills and consolidating account controls.
+- Removed duplicate logout and profile controls from the sidebar footer to unify account actions in the topbar dropdown.
+- Modernized design tokens in `app.css` to a clean, flat surface style with crisp borders and subtle shadows.
+- Made the Version Notice modal body scrollable with constrained vertical height so lengthy release notes scroll smoothly without stretching the modal dialog.
+
+### Performance
+- Reduced font icon overhead across navigation links and buttons for snappier page rendering and improved load performance.
+
+## [1.13.0] - 2026-08-09
+
+### What's New
+- Unified POS product-name, category, and barcode entry into one responsive search field.
+- Added a compact camera icon action to the unified POS search field while reusing the existing camera scanner modal, barcode lookup, and cart-add behavior.
+
+### Changed
+- Version Notice and Trusted Device Quick Login now use queued modal sequencing so only one modal is active at a time.
+- Scanner modal layout now fits the viewport on desktop and narrow mobile screens, with responsive preview sizing and scrollable modal content.
+
+### Fixed
+- Raised the shared modal/backdrop layer above the page-level floating cart control so the cart remains covered when a modal opens.
+- Fixed scanner modal clipping affecting the right edge, supported barcode text, preview area, close button, and Cancel button.
+
+## [1.12.0] - 2026-08-09
+
+### What's New
+- Added optional Trusted Device / Quick Login. After a successful username/password sign-in, users can register the current browser for quick session restoration without making the ordinary application session long-lived.
+- Trusted devices can either restore a session automatically or require a dedicated 4-digit PIN. The normal username/password form remains available as a fallback.
+- Added personal Trusted Device controls in Settings, including device status, PIN enable/change/disable, and removal.
+- Added administrator visibility and revocation controls for each account's active trusted device in User Accounts.
+
+### Security
+- Trusted-device credentials are generated from cryptographically secure random data, stored only as an HttpOnly cookie, and persisted only as a SHA-256 hash; raw credentials are never stored in SQLite.
+- Trusted-device PINs use bcrypt hashing and are protected by per-device failed-attempt limits and temporary lockout.
+- Enforced one active trusted device per account through transactional registration and a SQLite partial unique index. Explicit replacement revokes the prior device.
+- Password changes, account deactivation, expiration, removal, and administrator revocation invalidate affected trusted-device credentials. Quick login reuses the ordinary authorization and role checks.
+
+## [1.11.1] - 2026-07-29
+
+### Changed
+- Simplified Inventory barcode scanning into a search shortcut: completed scans populate the existing Inventory search field, apply its normal filters, and leave matching products visible in the results.
+- Inventory scans no longer open the Edit Product dialog, focus the selling price, or resume scanning after an item update; products are edited only through their existing Edit action.
+
+### Added
+- When a scanned barcode has no exact product match, Inventory now shows a Product not found confirmation dialog.
+- Choosing Register Product opens the existing Add Item dialog with the scanned barcode filled in and all other fields cleared for entry.
 
 ## [1.11.0] - 2026-07-27
 

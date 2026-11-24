@@ -1,8 +1,10 @@
 {
-  "version": "1.10.1",
+  "version": "1.14.0",
   "changes": [
-    "Optimized the Inventory table for mobile and tablet screens without changing the desktop layout.",
-    "Mobile Inventory now combines stock status into the Price column below the selling price and cost.",
-    "Mobile Inventory action buttons are stacked vertically and column alignment, widths, and padding were tuned to avoid horizontal scrolling and clipped controls."
+    "Added pagination support across the Inventory tab, Sales product catalog, eLoad Queue (Pending & Recent), and Daily Logs tables with configurable page sizes (5, 10, 25, 50, 100).",
+    "Redesigned the application layout with a persistent modern left sidebar on desktop and streamlined top header bar.",
+    "Removed redundant user card and logout triggers from the sidebar to unify profile and session management in the header menu.",
+    "Optimized font and asset loading by reducing icon dependencies for faster render times.",
+    "Made the Version Notice modal body scrollable with constrained viewport sizing so long release notes never stretch the dialog card."
   ]
 }

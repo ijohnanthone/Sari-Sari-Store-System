@@ -158,11 +158,47 @@
             </tbody>
           </table>
         </div>
+
+        <!-- Inventory Pagination -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-4 pt-3 border-top" id="inventoryPaginationContainer">
+          <div class="d-flex align-items-center gap-2">
+            <span class="mini-note text-muted">Show</span>
+            <select class="form-select form-select-sm w-auto" id="inventoryPageSizeSelect" aria-label="Items per page">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="25">25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+            <span class="mini-note text-muted" id="inventoryPaginationSummary"></span>
+          </div>
+          <nav aria-label="Inventory pagination">
+            <ul class="pagination pagination-sm mb-0" id="inventoryPaginationNav"></ul>
+          </nav>
+        </div>
       </div>
     </section>
     <%- include("partials/footer") %>
   </main>
 </div>
+
+<% if (user && user.role === "Admin") { %>
+<div class="modal fade" id="inventoryRegisterProductModal" tabindex="-1" aria-labelledby="inventoryRegisterProductTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg border-0">
+      <div class="modal-header border-0 pb-0">
+        <h2 class="modal-title h5" id="inventoryRegisterProductTitle">Product not found</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">No product matches the scanned barcode.<br><br>Would you like to register this product?</div>
+      <div class="modal-footer border-0 p-4 pt-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" id="inventoryRegisterProductButton">Register Product</button>
+      </div>
+    </div>
+  </div>
+</div>
+<% } %>
 
 <% if (user && user.role === "Admin") { %>
 <!-- CATEGORY MANAGEMENT MODAL -->
@@ -547,7 +583,6 @@
   const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
   const csrfToken = "<%= csrfToken %>";
   const canManageInventory = <%= user && user.role === "Admin" ? "true" : "false" %>;
-  const inventoryPageStateKey = "inventory-barcode-scan-resume";
   const inventorySearch = document.getElementById("inventoryLiveSearch");
   const inventoryStatus = document.getElementById("inventoryStatusFilter");
   const inventoryTableBody = document.getElementById("inventoryTableBody");
@@ -560,8 +595,14 @@
   const inventorySummaryInStock = document.getElementById("inventorySummaryInStock");
   const inventorySummaryLowStock = document.getElementById("inventorySummaryLowStock");
   const inventorySummaryOutOfStock = document.getElementById("inventorySummaryOutOfStock");
+  const inventoryRegisterProductModal = document.getElementById("inventoryRegisterProductModal");
+  const inventoryRegisterProductButton = document.getElementById("inventoryRegisterProductButton");
+  const addItemModal = document.getElementById("addItemModal");
+  const addItemForm = addItemModal?.querySelector("form");
+  const addItemBarcode = document.getElementById("addItemBarcode");
   let inventoryFetchController;
   let inventorySearchTimer;
+  let pendingRegistrationBarcode = "";
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -588,25 +629,91 @@
     inventoryScanAlertMessage.textContent = "";
   }
 
-  function focusSellingPriceInput(modalElement) {
-    const sellingPriceInput = modalElement?.querySelector('input[name="sellingPrice"]');
-    if (!sellingPriceInput) return;
-    sellingPriceInput.focus();
-    if (typeof sellingPriceInput.select === "function") {
-      sellingPriceInput.select();
-    } else if (typeof sellingPriceInput.setSelectionRange === "function") {
-      sellingPriceInput.setSelectionRange(0, String(sellingPriceInput.value || "").length);
-    }
-  }
+  let allInventoryItems = [];
+  let inventoryCurrentPage = 1;
+  const inventoryPageSizeSelect = document.getElementById("inventoryPageSizeSelect");
+  const inventoryPaginationNav = document.getElementById("inventoryPaginationNav");
+  const inventoryPaginationSummary = document.getElementById("inventoryPaginationSummary");
 
-  function renderInventoryRows(items) {
-    if (!inventoryTableBody) return;
-    if (!items.length) {
-      inventoryTableBody.innerHTML = `<tr id="inventoryEmptyRow"><td colspan="4" class="text-center py-4 mini-note">No inventory items matched the current filters.</td></tr>`;
+  function renderPaginationControls(totalItems, currentPage, pageSize, navElement, summaryElement, onPageChange) {
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    currentPage = Math.min(Math.max(1, currentPage), totalPages);
+
+    if (summaryElement) {
+      if (totalItems === 0) {
+        summaryElement.textContent = "0 items";
+      } else {
+        const start = (currentPage - 1) * pageSize + 1;
+        const end = Math.min(currentPage * pageSize, totalItems);
+        summaryElement.textContent = `Showing ${start} to ${end} of ${totalItems} items`;
+      }
+    }
+
+    if (!navElement) return;
+    if (totalItems === 0) {
+      navElement.innerHTML = "";
       return;
     }
 
-    inventoryTableBody.innerHTML = items.map((item) => `
+    let html = "";
+    html += `<li class="page-item ${currentPage <= 1 ? "disabled" : ""}">
+      <button class="page-link" type="button" data-page="${currentPage - 1}" aria-label="Previous">Previous</button>
+    </li>`;
+
+    const pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push("...");
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (currentPage < totalPages - 2) pages.push("...");
+      pages.push(totalPages);
+    }
+
+    pages.forEach(p => {
+      if (p === "...") {
+        html += `<li class="page-item disabled"><span class="page-link border-0">...</span></li>`;
+      } else {
+        html += `<li class="page-item ${p === currentPage ? "active" : ""}">
+          <button class="page-link" type="button" data-page="${p}">${p}</button>
+        </li>`;
+      }
+    });
+
+    html += `<li class="page-item ${currentPage >= totalPages ? "disabled" : ""}">
+      <button class="page-link" type="button" data-page="${currentPage + 1}" aria-label="Next">Next</button>
+    </li>`;
+
+    navElement.innerHTML = html;
+    navElement.querySelectorAll("button[data-page]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const targetPage = parseInt(btn.dataset.page, 10);
+        if (targetPage >= 1 && targetPage <= totalPages && targetPage !== currentPage) {
+          onPageChange(targetPage);
+        }
+      });
+    });
+  }
+
+  function renderInventoryPage() {
+    const pageSize = parseInt(inventoryPageSizeSelect?.value || "10", 10);
+    const totalItems = allInventoryItems.length;
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    inventoryCurrentPage = Math.min(Math.max(1, inventoryCurrentPage), totalPages);
+
+    if (!totalItems) {
+      inventoryTableBody.innerHTML = `<tr id="inventoryEmptyRow"><td colspan="4" class="text-center py-4 mini-note">No inventory items matched the current filters.</td></tr>`;
+      renderPaginationControls(0, 1, pageSize, inventoryPaginationNav, inventoryPaginationSummary, () => {});
+      return;
+    }
+
+    const start = (inventoryCurrentPage - 1) * pageSize;
+    const pageItems = allInventoryItems.slice(start, start + pageSize);
+
+    inventoryTableBody.innerHTML = pageItems.map((item) => `
       <tr class="inventory-row">
         <td class="ps-3 py-3">
           <div class="fw-bold text-dark">${escapeHtml(item.displayName || item.name)}</div>
@@ -639,6 +746,17 @@
         </td>
       </tr>
     `).join("");
+
+    renderPaginationControls(totalItems, inventoryCurrentPage, pageSize, inventoryPaginationNav, inventoryPaginationSummary, (newPage) => {
+      inventoryCurrentPage = newPage;
+      renderInventoryPage();
+    });
+  }
+
+  function renderInventoryRows(items) {
+    if (!inventoryTableBody) return;
+    allInventoryItems = items || [];
+    renderInventoryPage();
   }
 
   function updateInventorySummary(count) {
@@ -694,23 +812,16 @@
   }
 
   async function loadInventoryResults() {
-    if (!inventorySearch || !inventoryStatus || !inventoryTableBody) return;
+    if (!inventorySearch || !inventoryStatus || !inventoryTableBody) return null;
     try {
       hideInventoryAlert();
       const payload = await fetchInventoryResults(inventorySearch.value, inventoryStatus.value);
       await applyInventoryResults(payload);
+      return payload;
     } catch (error) {
       if (error.name !== "AbortError") console.error(error);
+      return null;
     }
-  }
-
-  async function openInventoryEditModal(item, barcode) {
-    if (!item || !canManageInventory) return;
-    const modalElement = document.getElementById(`editItemModal-${item.id}`);
-    if (!modalElement) return;
-    modalElement.dataset.inventoryScanOpened = "true";
-    const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
-    modal.show();
   }
 
   async function handleInventoryBarcodeScan(barcode) {
@@ -720,23 +831,26 @@
 
     inventorySearch.value = normalizedBarcode;
     hideInventoryAlert();
+    window.clearTimeout(inventorySearchTimer);
+    inventorySearch.dispatchEvent(new Event("input", { bubbles: true }));
+    window.clearTimeout(inventorySearchTimer);
 
     try {
-      const payload = await fetchInventoryResults(normalizedBarcode, inventoryStatus.value);
-      await applyInventoryResults(payload);
+      const payload = await loadInventoryResults();
+      if (!payload) return;
       const exactMatches = payload.items.filter((item) => normalizeBarcode(item.barcode) === normalizedBarcode);
-      if (!payload.items.length || !exactMatches.length) {
-        showInventoryAlert("Product not found.");
-        return;
-      }
-
-      if (payload.items.length === 1 && exactMatches.length === 1) {
-        await openInventoryEditModal(exactMatches[0], normalizedBarcode);
+      if (!exactMatches.length) {
+        pendingRegistrationBarcode = normalizedBarcode;
+        if (inventoryRegisterProductModal) {
+          bootstrap.Modal.getOrCreateInstance(inventoryRegisterProductModal).show();
+        } else {
+          showInventoryAlert("Product not found.");
+        }
       }
     } catch (error) {
       if (error.name !== "AbortError") {
         console.error(error);
-        showInventoryAlert("Product not found.");
+        showInventoryAlert("Unable to search inventory.");
       }
     }
   }
@@ -745,11 +859,22 @@
     inventoryScanAlert.querySelector(".btn-close")?.addEventListener("click", hideInventoryAlert);
   }
 
+  if (inventoryPageSizeSelect) {
+    inventoryPageSizeSelect.addEventListener("change", () => {
+      inventoryCurrentPage = 1;
+      renderInventoryPage();
+    });
+  }
+
   if (inventorySearch) inventorySearch.addEventListener("input", () => {
+    inventoryCurrentPage = 1;
     window.clearTimeout(inventorySearchTimer);
     inventorySearchTimer = window.setTimeout(loadInventoryResults, 160);
   });
-  if (inventoryStatus) inventoryStatus.addEventListener("change", loadInventoryResults);
+  if (inventoryStatus) inventoryStatus.addEventListener("change", () => {
+    inventoryCurrentPage = 1;
+    loadInventoryResults();
+  });
   if (inventoryPrintButton) inventoryPrintButton.addEventListener("click", () => {
     const params = new URLSearchParams({
       search: inventorySearch.value.trim(),
@@ -772,23 +897,6 @@
       title: "Scan Inventory Barcode",
       onScan: (barcode) => {
         handleInventoryBarcodeScan(barcode);
-      }
-    });
-  });
-
-  document.querySelectorAll('div[id^="editItemModal-"]').forEach((modalElement) => {
-    modalElement.addEventListener("shown.bs.modal", () => {
-      if (modalElement.dataset.inventoryScanOpened === "true") {
-        focusSellingPriceInput(modalElement);
-      }
-    });
-    modalElement.addEventListener("hidden.bs.modal", () => {
-      delete modalElement.dataset.inventoryScanOpened;
-    });
-    const form = modalElement.querySelector("form");
-    form?.addEventListener("submit", () => {
-      if (modalElement.dataset.inventoryScanOpened === "true") {
-        window.sessionStorage.setItem(inventoryPageStateKey, "1");
       }
     });
   });
@@ -821,17 +929,21 @@
     }
   });
 
-  if (window.sessionStorage.getItem(inventoryPageStateKey) === "1" && inventoryBarcodeScanner.ready) {
-    window.sessionStorage.removeItem(inventoryPageStateKey);
-    window.setTimeout(() => {
-      inventoryBarcodeScanner.open({
-        title: "Scan Inventory Barcode",
-        onScan: (barcode) => {
-          handleInventoryBarcodeScan(barcode);
-        }
-      });
-    }, 250);
-  }
+  inventoryRegisterProductButton?.addEventListener("click", () => {
+    if (!addItemModal || !addItemForm || !addItemBarcode) return;
+    addItemForm.reset();
+    addItemBarcode.value = pendingRegistrationBarcode;
+    inventoryRegisterProductModal.addEventListener("hidden.bs.modal", () => {
+      bootstrap.Modal.getOrCreateInstance(addItemModal).show();
+      addItemBarcode.focus();
+    }, { once: true });
+    bootstrap.Modal.getOrCreateInstance(inventoryRegisterProductModal).hide();
+    pendingRegistrationBarcode = "";
+  });
+
+  inventoryRegisterProductModal?.addEventListener("hidden.bs.modal", () => {
+    pendingRegistrationBarcode = "";
+  });
 
   if (inventorySearch && inventoryStatus && inventoryTableBody) loadInventoryResults();
 </script>

@@ -283,6 +283,26 @@
                     <% }) %>
                   <% } %>
                 </div>
+
+                <% if (pending.length) { %>
+                  <!-- Pending Queue Pagination -->
+                  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4 pt-3 border-top" id="eloadPendingPaginationContainer">
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="mini-note text-muted">Show</span>
+                      <select class="form-select form-select-sm w-auto" id="eloadPendingPageSizeSelect" aria-label="Requests per page">
+                        <option value="5" selected>5</option>
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                      </select>
+                      <span class="mini-note text-muted" id="eloadPendingPaginationSummary"></span>
+                    </div>
+                    <nav aria-label="Pending queue pagination">
+                      <ul class="pagination pagination-sm mb-0" id="eloadPendingPaginationNav"></ul>
+                    </nav>
+                  </div>
+                <% } %>
               </div>
             </div>
 
@@ -294,7 +314,7 @@
                   <div class="mini-note">History of processed transactions.</div>
                 </div>
 
-                <div class="vstack gap-3">
+                <div class="vstack gap-3" id="recentQueueList">
                   <%
                     const todayKey = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
                     const recent = requests
@@ -306,8 +326,7 @@
                         const resolvedKey = resolvedDate.toLocaleDateString("en-CA", { timeZone: "Asia/Manila" });
                         return resolvedKey === todayKey;
                       })
-                      .reverse()
-                      .slice(0, 10);
+                      .reverse();
                   %>
                   <% if (!recent.length) { %>
                     <div class="text-center py-5 opacity-50">
@@ -315,7 +334,7 @@
                     </div>
                   <% } else { %>
                     <% recent.forEach(req => { %>
-                      <div class="p-3 bg-light rounded-4 border-start border-4 <%= req.status === 'Completed' ? 'border-success' : 'border-danger' %>">
+                      <div class="recent-request-card p-3 bg-light rounded-4 border-start border-4 <%= req.status === 'Completed' ? 'border-success' : 'border-danger' %>">
                         <div class="d-flex justify-content-between align-items-center">
                           <div class="d-flex align-items-center gap-3">
                             <div>
@@ -335,6 +354,26 @@
                     <% }) %>
                   <% } %>
                 </div>
+
+                <% if (recent.length) { %>
+                  <!-- Recent Requests Pagination -->
+                  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-4 pt-3 border-top" id="eloadRecentPaginationContainer">
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="mini-note text-muted">Show</span>
+                      <select class="form-select form-select-sm w-auto" id="eloadRecentPageSizeSelect" aria-label="Recent requests per page">
+                        <option value="5">5</option>
+                        <option value="10" selected>10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                      </select>
+                      <span class="mini-note text-muted" id="eloadRecentPaginationSummary"></span>
+                    </div>
+                    <nav aria-label="Recent queue pagination">
+                      <ul class="pagination pagination-sm mb-0" id="eloadRecentPaginationNav"></ul>
+                    </nav>
+                  </div>
+                <% } %>
               </div>
             </div>
           </div>
@@ -693,8 +732,110 @@
     });
   }
 
+  // Queue Pagination
+  function renderGenericPagination(totalItems, currentPage, pageSize, navElement, summaryElement, onPageChange) {
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    currentPage = Math.min(Math.max(1, currentPage), totalPages);
+
+    if (summaryElement) {
+      if (totalItems === 0) {
+        summaryElement.textContent = "0 requests";
+      } else {
+        const start = (currentPage - 1) * pageSize + 1;
+        const end = Math.min(currentPage * pageSize, totalItems);
+        summaryElement.textContent = `Showing ${start} to ${end} of ${totalItems} requests`;
+      }
+    }
+
+    if (!navElement) return;
+    if (totalItems === 0) {
+      navElement.innerHTML = "";
+      return;
+    }
+
+    let html = "";
+    html += `<li class="page-item ${currentPage <= 1 ? "disabled" : ""}">
+      <button class="page-link" type="button" data-page="${currentPage - 1}" aria-label="Previous">Previous</button>
+    </li>`;
+
+    const pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push("...");
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (currentPage < totalPages - 2) pages.push("...");
+      pages.push(totalPages);
+    }
+
+    pages.forEach(p => {
+      if (p === "...") {
+        html += `<li class="page-item disabled"><span class="page-link border-0">...</span></li>`;
+      } else {
+        html += `<li class="page-item ${p === currentPage ? "active" : ""}">
+          <button class="page-link" type="button" data-page="${p}">${p}</button>
+        </li>`;
+      }
+    });
+
+    html += `<li class="page-item ${currentPage >= totalPages ? "disabled" : ""}">
+      <button class="page-link" type="button" data-page="${currentPage + 1}" aria-label="Next">Next</button>
+    </li>`;
+
+    navElement.innerHTML = html;
+    navElement.querySelectorAll("button[data-page]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const targetPage = parseInt(btn.dataset.page, 10);
+        if (targetPage >= 1 && targetPage <= totalPages && targetPage !== currentPage) {
+          onPageChange(targetPage);
+        }
+      });
+    });
+  }
+
+  function paginateCardList(containerId, itemSelector, pageSizeSelectId, navId, summaryId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const items = Array.from(container.querySelectorAll(itemSelector));
+    const pageSizeSelect = document.getElementById(pageSizeSelectId);
+    const nav = document.getElementById(navId);
+    const summary = document.getElementById(summaryId);
+    let currentPage = 1;
+
+    function renderPage() {
+      const pageSize = parseInt(pageSizeSelect?.value || "5", 10);
+      const totalItems = items.length;
+      const totalPages = Math.ceil(totalItems / pageSize) || 1;
+      currentPage = Math.min(Math.max(1, currentPage), totalPages);
+
+      items.forEach((item, index) => {
+        const isVisible = index >= (currentPage - 1) * pageSize && index < currentPage * pageSize;
+        item.classList.toggle("d-none", !isVisible);
+      });
+
+      renderGenericPagination(totalItems, currentPage, pageSize, nav, summary, (newPage) => {
+        currentPage = newPage;
+        renderPage();
+      });
+    }
+
+    if (pageSizeSelect) {
+      pageSizeSelect.addEventListener("change", () => {
+        currentPage = 1;
+        renderPage();
+      });
+    }
+
+    renderPage();
+  }
+
   // Init
   renderNetworks();
+  paginateCardList("pendingQueueList", ".request-card", "eloadPendingPageSizeSelect", "eloadPendingPaginationNav", "eloadPendingPaginationSummary");
+  paginateCardList("recentQueueList", ".recent-request-card", "eloadRecentPageSizeSelect", "eloadRecentPaginationNav", "eloadRecentPaginationSummary");
   if (window.location.hash === "#view-set") {
     const setTab = document.getElementById("nav-set-tab");
     if (setTab && window.bootstrap) bootstrap.Tab.getOrCreateInstance(setTab).show();

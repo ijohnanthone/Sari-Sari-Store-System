@@ -10,21 +10,12 @@
       <div class="d-flex flex-column h-100">
         <!-- Search & Filter Bar -->
         <div class="content-card p-3 mb-4">
-          <!-- Search Row -->
-          <div class="mb-3">
-            <div class="input-group search-glass">
-              <span class="input-group-text border-0 bg-transparent ps-3"><i class="bi bi-search text-muted"></i></span>
-              <input class="form-control border-0 bg-transparent py-2" id="quickItemSearch" placeholder="Search product or category..." autocomplete="off">
-            </div>
-          </div>
-
-          <div class="sales-barcode-panel mb-3">
-            <div class="input-group search-glass">
-              <span class="input-group-text border-0 bg-transparent ps-3"><i class="bi bi-upc-scan text-muted"></i></span>
-              <input class="form-control border-0 bg-transparent py-2" id="salesBarcodeInput" placeholder="Scan or type barcode, then press Enter" autocomplete="off">
-            </div>
-            <button class="btn btn-success btn-lg sales-scan-button" type="button" id="salesScanProductButton">
-              <i class="bi bi-camera me-2"></i>Scan Product
+          <!-- Unified product search and barcode entry -->
+          <div class="input-group search-glass mb-3">
+            <span class="input-group-text border-0 bg-transparent ps-3"><i class="bi bi-search text-muted"></i></span>
+            <input class="form-control border-0 bg-transparent py-2" id="quickItemSearch" placeholder="Search product, category, or scan barcode..." autocomplete="off">
+            <button class="btn btn-success rounded-3 me-1" type="button" id="salesScanProductButton" aria-label="Scan product barcode" title="Scan product barcode">
+              <i class="bi bi-camera"></i>
             </button>
           </div>
           
@@ -49,6 +40,24 @@
             </div>
             <h3 class="h5 fw-bold">No products found</h3>
             <p class="text-secondary">Try a different search term or category.</p>
+          </div>
+
+          <!-- Sales Products Pagination -->
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-4 pt-3 border-top" id="salesPaginationContainer">
+            <div class="d-flex align-items-center gap-2">
+              <span class="mini-note text-muted">Show</span>
+              <select class="form-select form-select-sm w-auto" id="salesPageSizeSelect" aria-label="Products per page">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="25" selected>25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+              <span class="mini-note text-muted" id="salesPaginationSummary"></span>
+            </div>
+            <nav aria-label="Sales product pagination">
+              <ul class="pagination pagination-sm mb-0" id="salesPaginationNav"></ul>
+            </nav>
           </div>
         </div>
       </div>
@@ -124,7 +133,6 @@
   const inventoryItems = <%- JSON.stringify(inventory) %>;
   const peso = new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" });
   const searchInput = document.getElementById("quickItemSearch");
-  const salesBarcodeInput = document.getElementById("salesBarcodeInput");
   const salesScanProductButton = document.getElementById("salesScanProductButton");
   const suggestions = document.getElementById("quickSuggestions");
   const emptySearchState = document.getElementById("emptySearchState");
@@ -148,6 +156,75 @@
   let activeCategory = "all";
   let cart = loadStoredCart();
   let isCartOpen = false;
+  let salesCurrentPage = 1;
+  const salesPageSizeSelect = document.getElementById("salesPageSizeSelect");
+  const salesPaginationContainer = document.getElementById("salesPaginationContainer");
+  const salesPaginationSummary = document.getElementById("salesPaginationSummary");
+  const salesPaginationNav = document.getElementById("salesPaginationNav");
+
+  function renderSalesPagination(totalItems, currentPage, pageSize) {
+    const totalPages = Math.ceil(totalItems / pageSize) || 1;
+    currentPage = Math.min(Math.max(1, currentPage), totalPages);
+
+    if (salesPaginationSummary) {
+      if (totalItems === 0) {
+        salesPaginationSummary.textContent = "0 products";
+      } else {
+        const start = (currentPage - 1) * pageSize + 1;
+        const end = Math.min(currentPage * pageSize, totalItems);
+        salesPaginationSummary.textContent = `Showing ${start} to ${end} of ${totalItems} products`;
+      }
+    }
+
+    if (!salesPaginationNav) return;
+    if (totalItems === 0) {
+      salesPaginationNav.innerHTML = "";
+      return;
+    }
+
+    let html = "";
+    html += `<li class="page-item ${currentPage <= 1 ? "disabled" : ""}">
+      <button class="page-link" type="button" data-page="${currentPage - 1}" aria-label="Previous">Previous</button>
+    </li>`;
+
+    const pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push("...");
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (currentPage < totalPages - 2) pages.push("...");
+      pages.push(totalPages);
+    }
+
+    pages.forEach(p => {
+      if (p === "...") {
+        html += `<li class="page-item disabled"><span class="page-link border-0">...</span></li>`;
+      } else {
+        html += `<li class="page-item ${p === currentPage ? "active" : ""}">
+          <button class="page-link" type="button" data-page="${p}">${p}</button>
+        </li>`;
+      }
+    });
+
+    html += `<li class="page-item ${currentPage >= totalPages ? "disabled" : ""}">
+      <button class="page-link" type="button" data-page="${currentPage + 1}" aria-label="Next">Next</button>
+    </li>`;
+
+    salesPaginationNav.innerHTML = html;
+    salesPaginationNav.querySelectorAll("button[data-page]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const targetPage = parseInt(btn.dataset.page, 10);
+        if (targetPage >= 1 && targetPage <= totalPages && targetPage !== salesCurrentPage) {
+          salesCurrentPage = targetPage;
+          renderSuggestions();
+        }
+      });
+    });
+  }
 
   function loadStoredCart() {
     try {
@@ -220,26 +297,51 @@
     return payload.item || null;
   }
 
+  function addResolvedBarcodeItem(item) {
+    if (!item || item.status === "Out of Stock") {
+      showSalesAlert("warning", "Product not found.");
+      return;
+    }
+
+    if (!inventoryItems.some(entry => entry.id === item.id)) {
+      inventoryItems.push(item);
+    }
+    addItemToCart(item.id, 1);
+    searchInput.value = "";
+    setCartOpen(true);
+  }
+
   async function addBarcodeToCart(barcode) {
     const normalizedBarcode = String(barcode || "").trim();
     if (!normalizedBarcode) return;
 
     try {
       const item = await findInventoryItemByBarcode(normalizedBarcode);
-      if (!item || item.status === "Out of Stock") {
-        showSalesAlert("warning", "Product not found.");
-        return;
-      }
-
-      if (!inventoryItems.some(entry => entry.id === item.id)) {
-        inventoryItems.push(item);
-      }
-      addItemToCart(item.id, 1);
-      salesBarcodeInput.value = "";
-      setCartOpen(true);
+      addResolvedBarcodeItem(item);
     } catch (error) {
       showSalesAlert("danger", error.message || "Unable to search barcode.");
     }
+  }
+
+  async function handleUnifiedSearchSubmit() {
+    const query = searchInput.value.trim();
+    if (!query) {
+      renderSuggestions();
+      return;
+    }
+
+    try {
+      const item = await findInventoryItemByBarcode(query);
+      if (item) {
+        addResolvedBarcodeItem(item);
+        return;
+      }
+    } catch (error) {
+      showSalesAlert("danger", error.message || "Unable to search barcode.");
+      return;
+    }
+
+    renderSuggestions();
   }
 
   function renderSuggestions() {
@@ -248,11 +350,21 @@
     if (!items.length) {
       suggestions.innerHTML = "";
       emptySearchState.classList.remove("d-none");
+      if (salesPaginationContainer) salesPaginationContainer.classList.add("d-none");
       return;
     }
 
     emptySearchState.classList.add("d-none");
-    suggestions.innerHTML = items.map(item => {
+    if (salesPaginationContainer) salesPaginationContainer.classList.remove("d-none");
+
+    const pageSize = parseInt(salesPageSizeSelect?.value || "25", 10);
+    const totalPages = Math.ceil(items.length / pageSize) || 1;
+    salesCurrentPage = Math.min(Math.max(1, salesCurrentPage), totalPages);
+
+    const start = (salesCurrentPage - 1) * pageSize;
+    const pagedItems = items.slice(start, start + pageSize);
+
+    suggestions.innerHTML = pagedItems.map(item => {
       const statusClass = item.status === "Low Stock" ? "text-warning" : "text-success";
       return `
         <div class="col-6 col-sm-4 col-md-3 col-xl-2">
@@ -273,6 +385,8 @@
         </div>
       `;
     }).join("");
+
+    renderSalesPagination(items.length, salesCurrentPage, pageSize);
   }
 
   function addItemToCart(itemId, quantity) {
@@ -376,7 +490,22 @@
   }
 
   // Event Listeners
-  searchInput.addEventListener("input", renderSuggestions);
+  if (salesPageSizeSelect) {
+    salesPageSizeSelect.addEventListener("change", () => {
+      salesCurrentPage = 1;
+      renderSuggestions();
+    });
+  }
+  searchInput.addEventListener("input", () => {
+    salesCurrentPage = 1;
+    renderSuggestions();
+  });
+  searchInput.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    salesCurrentPage = 1;
+    handleUnifiedSearchSubmit();
+  });
   const salesBarcodeScanner = new BarcodeScanner({ modalId: "salesBarcodeScannerModal" });
 
   if (salesScanProductButton) {
@@ -384,18 +513,11 @@
       salesBarcodeScanner.open({
         title: "Scan Product Barcode",
         onScan: (barcode) => {
-          salesBarcodeInput.value = barcode;
+          searchInput.value = barcode;
+          salesCurrentPage = 1;
           addBarcodeToCart(barcode);
         }
       });
-    });
-  }
-
-  if (salesBarcodeInput) {
-    salesBarcodeInput.addEventListener("keydown", (event) => {
-      if (event.key !== "Enter") return;
-      event.preventDefault();
-      addBarcodeToCart(salesBarcodeInput.value);
     });
   }
 
@@ -404,6 +526,7 @@
       categoryButtons.forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       activeCategory = btn.dataset.category;
+      salesCurrentPage = 1;
       renderSuggestions();
     });
   });

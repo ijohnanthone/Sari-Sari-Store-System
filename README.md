@@ -10,9 +10,11 @@ This project is a Bootstrap-based Sari-Sari Store Management System built with E
 ## Features
 
 - Dashboard with sales and inventory overview
-- Inventory management
-- Sales recording
-- eLoad and GCash request management
+- Inventory management with status grouping, live search, and configurable pagination (5, 10, 25, 50, 100)
+- Sales recording with barcode scanner support, category filtering, and paginated product catalog
+- eLoad and GCash request management with paginated pending queue and recent transaction history
+- Daily transaction logs with independent table pagination for products, eLoad, and GCash
+- Modern desktop sidebar layout with responsive mobile offcanvas drawer
 - Logs, exports, backup, and safe data reset tools
 - Settings page for store profile, notifications, appearance, export, backup, and reset
 - Seeded demo data for quick local testing
