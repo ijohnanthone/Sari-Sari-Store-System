@@ -7,16 +7,16 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const dataDir = path.join(__dirname, "..", "data");
+const defaultDataDir = process.env.VERCEL ? path.join("/tmp", "data") : path.join(__dirname, "..", "data");
 
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+if (!fs.existsSync(defaultDataDir)) {
+  fs.mkdirSync(defaultDataDir, { recursive: true });
 }
 
 const configuredDbPath = String(process.env.STORE_DB_PATH || "").trim();
 const dbPath = configuredDbPath
   ? (path.isAbsolute(configuredDbPath) ? configuredDbPath : path.join(__dirname, "..", configuredDbPath))
-  : path.join(dataDir, "store.db");
+  : path.join(defaultDataDir, "store.db");
 const dbDir = path.dirname(dbPath);
 if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });

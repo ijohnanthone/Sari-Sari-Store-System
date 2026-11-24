@@ -1499,6 +1499,10 @@ app.use((req, res) => {
   res.status(404).render("not-found", { pageTitle: "Not Found", todayLabel: todayLabel() });
 });
 
-app.listen(port, () => {
-  console.log(`Sari-Sari Store app running at http://localhost:${port}`);
-});
+if (!process.env.VERCEL) {
+  app.listen(port, () => {
+    console.log(`Sari-Sari Store app running at http://localhost:${port}`);
+  });
+}
+
+export default app;
