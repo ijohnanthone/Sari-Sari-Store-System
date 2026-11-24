@@ -78,6 +78,14 @@ import {
 import { SQLiteSessionStore } from "./sqlite-session-store.js";
 import { formatProductName } from "./product-name.js";
 import { parseInventoryCsv } from "./inventory-csv.js";
+import {
+  app as firebaseApp,
+  db as firebaseDb,
+  firebaseConfig,
+  testFirebaseConnection,
+  writeTestProduct,
+  readTestProducts
+} from "./firebase.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -720,6 +728,24 @@ app.post("/api/sales", requireApiAuth, requireSalesApiAccess, (req, res) => {
   } catch (error) {
     return res.status(400).json({ error: error.message });
   }
+});
+
+app.get("/api/firebase/test", async (req, res) => {
+  try {
+    const result = await testFirebaseConnection();
+    return res.json(result);
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.get("/firebase-test", (req, res) => {
+  sendNoStore(res);
+  return res.render("firebase-test", {
+    pageTitle: "Firebase RTDB Test",
+    databaseURL: firebaseConfig.databaseURL,
+    projectId: firebaseConfig.projectId
+  });
 });
 
 app.get("/login", (req, res) => {

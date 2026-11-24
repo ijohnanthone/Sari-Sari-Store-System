@@ -417,6 +417,15 @@ async function main() {
   const deletedQuickLogin = await requestWithCookie("/login", userTrustedCookie);
   if (deletedQuickLogin.status !== 200) throw new Error("Deleted user was allowed to quick-login.");
 
+  const firebasePage = await fetch(`${baseUrl}/firebase-test`);
+  if (!firebasePage.ok) throw new Error("Firebase test page failed to load.");
+  const firebaseApi = await fetch(`${baseUrl}/api/firebase/test`);
+  if (!firebaseApi.ok) throw new Error("Firebase test API failed.");
+  const firebaseJson = await firebaseApi.json();
+  if (!firebaseJson.success || !firebaseJson.written || !firebaseJson.readBack) {
+    throw new Error("Firebase test round-trip failed.");
+  }
+
   console.log("Smoke test passed.");
 }
 

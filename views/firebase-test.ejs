@@ -1,0 +1,179 @@
+<%- include("partials/head") %>
+<main class="container py-4 py-lg-5" style="max-width: 860px;">
+  <div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-3">
+      <div class="rounded-3 bg-warning bg-opacity-10 p-3 text-warning border border-warning border-opacity-25">
+        <i class="bi bi-fire fs-2"></i>
+      </div>
+      <div>
+        <h1 class="h3 fw-bold mb-1">Firebase Realtime Database Test</h1>
+        <p class="text-secondary mb-0">SariTech Cloud Connection & Verification Portal</p>
+      </div>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <span id="connectionBadge" class="badge bg-secondary-subtle text-secondary px-3 py-2 fs-6 border">
+        <i class="bi bi-hourglass-split me-1"></i> Testing Connection...
+      </span>
+      <a href="/" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-house me-1"></i> Return Home
+      </a>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0 mb-4 rounded-3 overflow-hidden">
+    <div class="card-header bg-body-tertiary border-bottom py-3">
+      <div class="d-flex align-items-center justify-content-between">
+        <span class="fw-semibold"><i class="bi bi-gear-wide-connected me-2 text-primary"></i>Configuration Details</span>
+        <span class="badge bg-primary-subtle text-primary border">Realtime Database (RTDB)</span>
+      </div>
+    </div>
+    <div class="card-body p-4">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label text-muted small fw-semibold text-uppercase">Database URL</label>
+          <div class="font-monospace small bg-body-secondary p-2 rounded text-break" id="cfgDbUrl"><%= databaseURL %></div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label text-muted small fw-semibold text-uppercase">Project ID</label>
+          <div class="font-monospace small bg-body-secondary p-2 rounded" id="cfgProjectId"><%= projectId %></div>
+        </div>
+        <div class="col-12">
+          <label class="form-label text-muted small fw-semibold text-uppercase">Environment Keys Mapped</label>
+          <div class="d-flex flex-wrap gap-1">
+            <span class="badge bg-light text-dark border">NEXT_PUBLIC_FIREBASE_API_KEY</span>
+            <span class="badge bg-light text-dark border">NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN</span>
+            <span class="badge bg-light text-dark border">NEXT_PUBLIC_FIREBASE_DATABASE_URL</span>
+            <span class="badge bg-light text-dark border">NEXT_PUBLIC_FIREBASE_PROJECT_ID</span>
+            <span class="badge bg-light text-dark border">NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET</span>
+            <span class="badge bg-light text-dark border">NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID</span>
+            <span class="badge bg-light text-dark border">NEXT_PUBLIC_FIREBASE_APP_ID</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0 mb-4 rounded-3">
+    <div class="card-header bg-body-tertiary border-bottom py-3 d-flex align-items-center justify-content-between">
+      <span class="fw-semibold"><i class="bi bi-activity me-2 text-success"></i>Round-Trip Verification</span>
+      <button id="runTestBtn" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1">
+        <i class="bi bi-play-fill"></i> Run Test
+      </button>
+    </div>
+    <div class="card-body p-4">
+      <div id="testAlert" class="alert alert-info d-flex align-items-center gap-2 mb-4">
+        <div class="spinner-border spinner-border-sm" role="status" id="testSpinner"></div>
+        <span id="testStatusText">Running automated read/write test...</span>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-md-6">
+          <div class="border rounded-3 p-3 bg-body-tertiary h-100">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <span class="fw-semibold small text-uppercase text-secondary">
+                <i class="bi bi-box-arrow-in-up text-primary me-1"></i> 1. Write to RTDB
+              </span>
+              <span class="badge bg-info-subtle text-info">Path: /test-products</span>
+            </div>
+            <p class="text-secondary small mb-2">Payload written to Firebase Realtime Database:</p>
+            <pre class="bg-body-secondary p-3 rounded small mb-0 font-monospace text-wrap" id="writtenOutput">Waiting for write test...</pre>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="border rounded-3 p-3 bg-body-tertiary h-100">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <span class="fw-semibold small text-uppercase text-secondary">
+                <i class="bi bi-box-arrow-in-down text-success me-1"></i> 2. Read back from RTDB
+              </span>
+              <span class="badge bg-success-subtle text-success">Verified Match</span>
+            </div>
+            <p class="text-secondary small mb-2">Data retrieved back from Firebase:</p>
+            <pre class="bg-body-secondary p-3 rounded small mb-0 font-monospace text-wrap" id="readBackOutput">Waiting for read back test...</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0 rounded-3">
+    <div class="card-header bg-body-tertiary border-bottom py-3">
+      <span class="fw-semibold"><i class="bi bi-terminal me-2 text-secondary"></i>Live Log Output</span>
+    </div>
+    <div class="card-body p-0">
+      <pre class="p-3 m-0 bg-dark text-success font-monospace small" id="liveLogs" style="max-height: 200px; overflow-y: auto;">[SariTech RTDB Test Console Initialized]</pre>
+    </div>
+  </div>
+</main>
+
+<script>
+  (function() {
+    const badge = document.getElementById("connectionBadge");
+    const testAlert = document.getElementById("testAlert");
+    const testSpinner = document.getElementById("testSpinner");
+    const testStatusText = document.getElementById("testStatusText");
+    const writtenOutput = document.getElementById("writtenOutput");
+    const readBackOutput = document.getElementById("readBackOutput");
+    const liveLogs = document.getElementById("liveLogs");
+    const runBtn = document.getElementById("runTestBtn");
+
+    function log(msg) {
+      console.log("[Firebase RTDB Test]", msg);
+      const time = new Date().toLocaleTimeString();
+      liveLogs.textContent += `\n[${time}] ${msg}`;
+      liveLogs.scrollTop = liveLogs.scrollHeight;
+    }
+
+    async function executeTest() {
+      runBtn.disabled = true;
+      testSpinner.classList.remove("d-none");
+      testAlert.className = "alert alert-info d-flex align-items-center gap-2 mb-4";
+      testStatusText.textContent = "Writing test product to /test-products and reading back...";
+      badge.className = "badge bg-secondary-subtle text-secondary px-3 py-2 fs-6 border";
+      badge.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Testing...';
+
+      log("Initiating test request to /api/firebase/test...");
+
+      try {
+        const response = await fetch("/api/firebase/test");
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || "Connection test failed");
+        }
+
+        log("Successfully connected to: " + data.databaseURL);
+        log("Written product key: " + data.written.id);
+        log("Read back product: " + JSON.stringify(data.readBack));
+
+        writtenOutput.textContent = JSON.stringify(data.written, null, 2);
+        readBackOutput.textContent = JSON.stringify(data.readBack, null, 2);
+
+        testSpinner.classList.add("d-none");
+        testAlert.className = "alert alert-success d-flex align-items-center gap-2 mb-4";
+        testStatusText.innerHTML = '<i class="bi bi-check-circle-fill text-success fs-5"></i> <strong>Connection Successful!</strong> Test product was written and read back successfully.';
+
+        badge.className = "badge bg-success-subtle text-success px-3 py-2 fs-6 border border-success";
+        badge.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Connected & Verified';
+        log("Firebase Realtime Database is ready and operational.");
+      } catch (err) {
+        console.error("[Firebase RTDB Test Error]", err);
+        log("ERROR: " + err.message);
+
+        testSpinner.classList.add("d-none");
+        testAlert.className = "alert alert-danger d-flex align-items-center gap-2 mb-4";
+        testStatusText.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-danger fs-5"></i> <strong>Error:</strong> ' + err.message;
+
+        badge.className = "badge bg-danger-subtle text-danger px-3 py-2 fs-6 border border-danger";
+        badge.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i> Failed';
+      } finally {
+        runBtn.disabled = false;
+      }
+    }
+
+    runBtn.addEventListener("click", executeTest);
+    // Auto-run on load
+    window.addEventListener("DOMContentLoaded", executeTest);
+  })();
+</script>
+<%- include("partials/footer") %>
