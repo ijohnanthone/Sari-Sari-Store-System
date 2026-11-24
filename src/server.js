@@ -76,6 +76,7 @@ import {
   getInventorySummary
 } from "./db.js";
 import { SQLiteSessionStore } from "./sqlite-session-store.js";
+import { FirebaseSessionStore } from "./firebase-session-store.js";
 import { formatProductName } from "./product-name.js";
 import { parseInventoryCsv } from "./inventory-csv.js";
 import {
@@ -132,23 +133,27 @@ await initializeDatabase();
 
 
 app.disable("x-powered-by");
+app.set("trust proxy", 1);
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "..", "views"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 app.use(express.static(path.join(__dirname, "..", "public")));
-const sessionStore = new SQLiteSessionStore({ defaultTtlMs: sessionMaxAgeMs });
+const sessionStore = firebaseDb
+  ? new FirebaseSessionStore({ defaultTtlMs: sessionMaxAgeMs })
+  : new SQLiteSessionStore({ defaultTtlMs: sessionMaxAgeMs });
 app.use(session({
   name: sessionCookieName,
   secret: sessionSecret || crypto.randomBytes(32).toString("hex"),
   store: sessionStore,
+  proxy: true,
   resave: false,
   saveUninitialized: false,
   rolling: true,
   cookie: {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: "auto",
     maxAge: sessionMaxAgeMs
   }
 }));
