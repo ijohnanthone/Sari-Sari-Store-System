@@ -4,6 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
+import { db as firebaseDb } from "./firebase.js";
+import { ref, get, set } from "firebase/database";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -920,6 +922,53 @@ export async function initializeDatabase() {
   ensureReportingViews();
   await seedDefaults();
   seedEloadSettings();
+
+  if (firebaseDb) {
+    try {
+      const snapshot = await get(ref(firebaseDb, "cloud_users"));
+      if (snapshot.exists()) {
+        const cloudUsers = snapshot.val();
+        const insertUser = db.prepare(`
+          INSERT INTO users (username, full_name, role, email, phone, password_hash, pin_hash, must_change_password, is_active)
+          VALUES (?, ?, ?, ?, ?, ?, '', ?, ?)
+        `);
+        const updateUser = db.prepare(`
+          UPDATE users SET full_name = ?, role = ?, email = ?, phone = ?, password_hash = ?, is_active = ?
+          WHERE username = ?
+        `);
+        const findUser = db.prepare("SELECT id FROM users WHERE username = ?");
+
+        for (const [key, user] of Object.entries(cloudUsers)) {
+          if (!user || !user.username) continue;
+          const existing = findUser.get(user.username);
+          if (existing) {
+            updateUser.run(
+              user.fullName || user.username,
+              user.role || "User",
+              user.email || "",
+              user.phone || "",
+              user.passwordHash,
+              user.isActive !== undefined ? (user.isActive ? 1 : 0) : 1,
+              user.username
+            );
+          } else {
+            insertUser.run(
+              user.username,
+              user.fullName || user.username,
+              user.role || "User",
+              user.email || "",
+              user.phone || "",
+              user.passwordHash,
+              user.mustChangePassword ? 1 : 0,
+              user.isActive !== undefined ? (user.isActive ? 1 : 0) : 1
+            );
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Unable to sync users from Firebase RTDB:", err.message);
+    }
+  }
 }
 
 export function getUserByUsername(username) {
@@ -1448,6 +1497,24 @@ export async function createUserAccount(input) {
     input.phone,
     passwordHash
   );
+
+  if (firebaseDb) {
+    try {
+      await set(ref(firebaseDb, `cloud_users/${input.username.toLowerCase()}`), {
+        username: input.username,
+        fullName: input.fullName,
+        role: input.role,
+        email: input.email,
+        phone: input.phone,
+        passwordHash,
+        mustChangePassword: 0,
+        isActive: 1,
+        updatedAt: Date.now()
+      });
+    } catch (err) {
+      console.warn("Failed to sync new user to Firebase:", err.message);
+    }
+  }
 }
 
 export async function updateUserAccount(userId, input) {
@@ -1463,6 +1530,18 @@ export async function updateUserAccount(userId, input) {
   if (input.password) {
     await updatePassword(userId, input.password);
   }
+
+  if (firebaseDb && input.username) {
+    try {
+      await set(ref(firebaseDb, `cloud_users/${input.username.toLowerCase()}/fullName`), input.fullName);
+      await set(ref(firebaseDb, `cloud_users/${input.username.toLowerCase()}/role`), input.role);
+      await set(ref(firebaseDb, `cloud_users/${input.username.toLowerCase()}/email`), input.email);
+      await set(ref(firebaseDb, `cloud_users/${input.username.toLowerCase()}/phone`), input.phone);
+      await set(ref(firebaseDb, `cloud_users/${input.username.toLowerCase()}/isActive`), isActive);
+    } catch (err) {
+      console.warn("Failed to sync user account to Firebase:", err.message);
+    }
+  }
 }
 
 export function updateUserPin(userId, newPin) {
@@ -1473,6 +1552,16 @@ export async function updatePassword(userId, newPassword) {
   const passwordHash = await hashPassword(newPassword);
   db.prepare("UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?").run(passwordHash, userId);
   revokeTrustedDevicesForUser(userId);
+
+  const user = getUserById(userId);
+  if (user && firebaseDb) {
+    try {
+      await set(ref(firebaseDb, `cloud_users/${user.username.toLowerCase()}/passwordHash`), passwordHash);
+      await set(ref(firebaseDb, `cloud_users/${user.username.toLowerCase()}/mustChangePassword`), 0);
+    } catch (err) {
+      console.warn("Failed to sync password update to Firebase:", err.message);
+    }
+  }
 }
 
 export function updateNotifications(input) {
